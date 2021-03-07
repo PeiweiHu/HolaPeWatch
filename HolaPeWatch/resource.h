@@ -1,5 +1,5 @@
 #define IDM_MENU 101
-#define IDC_EDIT 102
+#define IDC_LISTVIEW 102
 #define IDC_TREEVIEW 103
 
 //#define ID_FILE 201

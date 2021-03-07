@@ -10,6 +10,49 @@ IMAGE_IMPORT_DESCRIPTOR import_desc[1000];
 int import_desc_cnt;
 IMAGE_EXPORT_DIRECTORY export_directory;
 
+/*------------------------------error handler--------------------------------------------*/
+struct error_struct error_head = { "HEAD", 1, NULL};
+
+void add_error(char * reason, int level) {
+	struct error_struct * new_error = (struct error_struct *)malloc(sizeof(struct error_struct));
+	new_error->level = level;
+	strcpy(new_error->reason, reason);
+	// find the end of this link
+	struct error_struct *tmp = &error_head;
+	while (tmp->next != NULL) {
+		tmp = tmp->next;
+	}
+	// insert
+	tmp->next = &new_error;
+}
+
+int need_terminate() {
+	struct error_struct *tmp = &error_head;
+	do {
+		if (tmp->level == 0) {
+			return 1;
+		}
+		tmp = tmp->next;
+	} while (tmp != NULL);
+	return 0;
+}
+
+char ** get_key_error() {
+	char * key_error[1000];
+	int index = 0;
+	struct error_struct *tmp = &error_head;
+	do {
+		if (tmp->level == 1) {
+			key_error[index++] = tmp->reason;
+		}
+		tmp = tmp->next;
+	} while (tmp != NULL);
+	key_error[index] = "END";
+	return key_error;
+}
+/*------------------------------error handler end-----------------------------------------*/
+
+
 // address translation
 DWORD rva_to_raw(DWORD rva) {
 	int sec_index = 0;
@@ -31,7 +74,7 @@ DWORD rva_to_raw(DWORD rva) {
 
 // get string from raw data, based on rva
 char * get_str(DWORD rva, FILE * pfile) {
-	char * buf = new char[255];
+	char * buf = (char *)malloc(255);
 	int index = 0;
 	DWORD raw = rva_to_raw(rva);
 	fseek(pfile, raw, SEEK_SET);
@@ -111,15 +154,59 @@ void assign_var(char * file_path) {
 
 //-----------------comm with GUI----------------
 
+long get_filesize(char * path) {
+	FILE * pfile = fopen(path, "rb+");
+	if (pfile == NULL) {
+		return -1;
+	}
+
+	// get file size
+	fseek(pfile, 0, SEEK_END);
+	long sz = ftell(pfile);
+	fclose(pfile);
+	return sz;
+}
+
+unsigned char * all_content(char * path) {
+	FILE * pfile = fopen(path, "rb+");
+	if (pfile == NULL) {
+		return NULL;
+	}
+
+	// get file size
+	fseek(pfile, 0, SEEK_END);
+	long sz = ftell(pfile);
+	fseek(pfile, 0, SEEK_SET);
+
+	// malloc
+	unsigned char * buf = (unsigned char *)malloc(sz);
+	if (buf == NULL) {
+		fclose(pfile);
+		return NULL;
+	}
+
+	// read
+	if (fread(buf, sizeof(char), sz, pfile) != sz) {
+		fclose(pfile);
+		return NULL;
+	}
+	else {
+		fclose(pfile);
+		return buf;
+	}
+}
+
+
 char ** get_first_level() {
-	char ** first_level = new char*[100];
+	char ** first_level = (char **)malloc(100 * sizeof(char*));
 	first_level[0] = "IMAGE_DOS_HEADER";
 	first_level[1] = "DOS Stub";
 	first_level[2] = "IMAGE_NT_HEADERS";
 	for (int i = 0; i < number_of_sections; i++) {
-		char * prefix = new char[MAX_PATH];
+		char * prefix = (char *)malloc(MAX_PATH);
 		strcpy(prefix, "IMAGE_SECTION_HEADER ");
 		first_level[3 + i] = strcat(prefix, (char*)section_header[i].Name);
+		//free(prefix);
 	}
 	first_level[3 + number_of_sections] = "END";
 	return first_level;
@@ -128,13 +215,5 @@ char ** get_first_level() {
 
 int test(void) {
 	assign_var("C:\\Users\\hpw\\Desktop\\Tools\\PEview.exe");
-	//assign_var("C:\\Users\\hpw\\Desktop\\Qt5Gui.dll");
-	/*
-	if (index != 0) {
-		for (int i = 0; i < index; i++) {
-			printf(errors[i]);
-			printf("\n");
-		}
-	}*/
 	return 0;
 }

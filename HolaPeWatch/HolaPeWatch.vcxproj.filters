@@ -28,10 +28,10 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pe_parser.cpp">
+    <ClCompile Include="pe_parser.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
