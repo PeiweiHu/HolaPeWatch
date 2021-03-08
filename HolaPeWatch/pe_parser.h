@@ -39,3 +39,4 @@ long get_filesize(char * path);
 void add_error(char * reason, int level);
 int need_terminate();
 char ** get_key_error();
+int get_error_cnt();

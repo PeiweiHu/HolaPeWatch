@@ -50,6 +50,16 @@ char ** get_key_error() {
 	key_error[index] = "END";
 	return key_error;
 }
+
+int get_error_cnt() {
+	int cnt = 0;
+	struct error_struct *tmp = &error_head;
+	while (tmp != NULL) {
+		cnt++;
+		tmp = tmp->next;
+	};
+	return cnt;
+}
 /*------------------------------error handler end-----------------------------------------*/
 
 
@@ -74,7 +84,7 @@ DWORD rva_to_raw(DWORD rva) {
 
 // get string from raw data, based on rva
 char * get_str(DWORD rva, FILE * pfile) {
-	char * buf = (char *)malloc(255);
+	char * buf = (char *)malloc(256);
 	int index = 0;
 	DWORD raw = rva_to_raw(rva);
 	fseek(pfile, raw, SEEK_SET);
@@ -102,18 +112,16 @@ int which_section(DWORD rva) {
 }
 
 void assign_var(char * file_path) {
-	int index = 0;
-	char * errors[100];
 	// load file
 	FILE * pfile = fopen(file_path, "rb+");
 	if (pfile == NULL) {
-		errors[index++] = "Fail to read file.";
+		add_error("Fail to load file in function assign_var, pe_parser.c", 1);
 		return;
 	}
 	// get dos header
 	fread(&dos_header, sizeof(IMAGE_DOS_HEADER), 1, pfile);
 	if (dos_header.e_magic != IMAGE_DOS_SIGNATURE) { // check dos signature
-		errors[index++] = "Invalid dos signature.";
+		add_error("The selected file has invalid dos signature.", 1);
 		return;
 	}
 	// get nt header
@@ -121,7 +129,7 @@ void assign_var(char * file_path) {
 	fseek(pfile, dos_header.e_lfanew, SEEK_SET);
 	fread(&nt_headers, sizeof(IMAGE_NT_HEADERS), 1, pfile);
 	if (nt_headers.Signature != IMAGE_NT_SIGNATURE) { // check nt signature
-		errors[index++] = "Invalid nt signature.";
+		add_error("The selected file has invalid nt signature.", 1);
 		return;
 	}
 	// get file header and optional header
@@ -157,6 +165,7 @@ void assign_var(char * file_path) {
 long get_filesize(char * path) {
 	FILE * pfile = fopen(path, "rb+");
 	if (pfile == NULL) {
+		add_error("Fail to load file in function get_filesize, pe_parser.c", 1);
 		return -1;
 	}
 
@@ -170,6 +179,7 @@ long get_filesize(char * path) {
 unsigned char * all_content(char * path) {
 	FILE * pfile = fopen(path, "rb+");
 	if (pfile == NULL) {
+		add_error("Fail to load file in function all_content, pe_parser.c", 1);
 		return NULL;
 	}
 
@@ -181,12 +191,14 @@ unsigned char * all_content(char * path) {
 	// malloc
 	unsigned char * buf = (unsigned char *)malloc(sz);
 	if (buf == NULL) {
+		add_error("Fail to malloc memory in function all_content, pe_parser.c", 1);
 		fclose(pfile);
 		return NULL;
 	}
 
 	// read
 	if (fread(buf, sizeof(char), sz, pfile) != sz) {
+		add_error("Fail to read ideal number of byte from file in function all_content, pe_parser.c", 1);
 		fclose(pfile);
 		return NULL;
 	}
@@ -210,10 +222,4 @@ char ** get_first_level() {
 	}
 	first_level[3 + number_of_sections] = "END";
 	return first_level;
-}
-
-
-int test(void) {
-	assign_var("C:\\Users\\hpw\\Desktop\\Tools\\PEview.exe");
-	return 0;
 }
