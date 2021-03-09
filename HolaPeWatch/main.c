@@ -226,8 +226,25 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (offset + (16 - 1) > g_sz) {
 				int left = g_sz - offset;
 				char left_data[100];
+				char left_tmp[3];
 				char left_ascii[100];
-				//-------------------------=================----------------====================
+				// I don't like this part, refine later
+				for (int i = 0; i < left; i++) {
+					wsprintf(left_tmp, "%02x ", g_content[offset + i]);
+					strcat(left_data, left_tmp);
+					wsprintf(left_tmp, "%01c", ascii_convert(g_content[offset + i]));
+					strcat(left_ascii, left_tmp);
+				}
+				if (col == 0) {
+					wsprintf(addr, "%08x", row * 16);
+					plvdi->item.pszText = strupr(addr);
+				}
+				else if (col == 1){
+					plvdi->item.pszText = strupr(left_data);
+				}
+				else if (col == 2) {
+					plvdi->item.pszText = left_ascii;
+				}
 			}
 			// not last line
 			else {
