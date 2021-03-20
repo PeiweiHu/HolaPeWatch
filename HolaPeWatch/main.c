@@ -130,8 +130,8 @@ void add_cols(col_style cols[]) {
 		lvc.cchTextMax = MAX_PATH;
 		lvc.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
 		lvc.cx = cols[col_cnt].width;
-		//lvc.fmt = LVCFMT_CENTER;
-		lvc.fmt = LVCFMT_LEFT;
+		lvc.fmt = LVCFMT_CENTER;
+		//lvc.fmt = LVCFMT_LEFT;
 		lvc.pszText = cols[col_cnt].name;
 		ListView_InsertColumn(hListView, col_cnt, &lvc);
 		col_cnt++;
@@ -237,6 +237,14 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 					wsprintf(left_tmp, "%01c", ascii_convert(g_content[offset + i]));
 					strcat(left_ascii, left_tmp);
 				}
+				// fill to fix width
+				while (strlen(left_data) < 48) {
+					strcat(left_data, " ");
+				}
+				while (strlen(left_ascii) < 16) {
+					strcat(left_ascii, " ");
+				}
+				// pass data
 				if (col == 0) {
 					wsprintf(addr, "%08x", row * 16);
 					plvdi->item.pszText = strupr(addr);

@@ -1,6 +1,6 @@
 #include "resource.h"
 
-
+// main menu
 IDM_MENU MENU DISCARDABLE
 BEGIN
 POPUP "File"
@@ -8,5 +8,7 @@ BEGIN
 MENUITEM "Open", ID_FILE_OPEN
 MENUITEM "Close", ID_FILE_CLOSE
 END
+MENUITEM "Goto", ID_GOTO
 MENUITEM "About", ID_ABOUT
 END
+
