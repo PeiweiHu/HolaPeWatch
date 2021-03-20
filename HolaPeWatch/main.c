@@ -130,7 +130,8 @@ void add_cols(col_style cols[]) {
 		lvc.cchTextMax = MAX_PATH;
 		lvc.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
 		lvc.cx = cols[col_cnt].width;
-		lvc.fmt = LVCFMT_CENTER;
+		//lvc.fmt = LVCFMT_CENTER;
+		lvc.fmt = LVCFMT_LEFT;
 		lvc.pszText = cols[col_cnt].name;
 		ListView_InsertColumn(hListView, col_cnt, &lvc);
 		col_cnt++;
@@ -213,6 +214,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		}
 	} /*if (NM_CLICK == lpnmh->code) end*/
 	else if (LVN_GETDISPINFO == lpnmh->code) {
+		// getdispinfo for right area
 		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lpnmh;
 		int row = plvdi->item.iItem;
 		int col = plvdi->item.iSubItem;
@@ -225,9 +227,9 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			// last line
 			if (offset + (16 - 1) > g_sz) {
 				int left = g_sz - offset;
-				char left_data[100];
-				char left_tmp[3];
-				char left_ascii[100];
+				char left_data[100] = "";
+				char left_tmp[30] = "";
+				char left_ascii[100] = "";
 				// I don't like this part, refine later
 				for (int i = 0; i < left; i++) {
 					wsprintf(left_tmp, "%02x ", g_content[offset + i]);
