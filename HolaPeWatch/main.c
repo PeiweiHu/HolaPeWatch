@@ -200,7 +200,9 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			ti.hItem = hItem;
 			TreeView_GetItem(lpnmh->hwndFrom, &ti);
 			// save the clicked item to g_last_click
-			strcpy(g_last_click, buf);
+			if (strlen(buf) != 0) {
+				strcpy(g_last_click, buf);
+			}
 			// response
 			if (strcmp(buf, g_filename) == 0) {
 				add_cols(g_col_style1);
@@ -330,7 +332,8 @@ BOOL go() {
 	// first check format
 	// remove 0x 0X
 	if (g_goto_buf[0] == '0' && (g_goto_buf[1] == 'x' || g_goto_buf[1] == 'X')) {
-		g_goto_buf += 2;
+		g_goto_buf[0] = '0';
+		g_goto_buf[1] = '0';
 	}
 	int buf_len = strlen(g_goto_buf);
 	for (int i = 0; i < buf_len; i++) {
@@ -358,7 +361,8 @@ BOOL go() {
 		return FALSE;
 	}
 	ListView_EnsureVisible(hListView, addr, 0);
-
+	free(g_goto_buf);
+	g_goto_buf = NULL;
 }
 
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
