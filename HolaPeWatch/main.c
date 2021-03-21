@@ -38,11 +38,12 @@ char g_filename[MAX_PATH] = "HolaPeWatch_waiting_for_file";
 char g_last_click[MAX_PATH] = "";    // last clicked item in tree view
 unsigned char * g_content;           // the whole content of the seleced file
 long g_sz;                           // size of the selected file
+char *g_goto_buf = NULL;
 
 
 // function decl
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
+BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 void register_window() {
 	// register MainWnd
@@ -315,9 +316,89 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		}
 	}
 					   break;
+	case ID_GOTO: {
+		int ret = DialogBox(GetModuleHandle(NULL),
+			MAKEINTRESOURCE(IDD_GOTO), hwnd, GotoDlgProc);
+	}
+				  break;
 	} /*switch (LOWORD(wParam))*/
 }
 
+// check g_goto_buf
+BOOL go() {
+	if (g_goto_buf == NULL) return FALSE;
+	// first check format
+	// remove 0x 0X
+	if (g_goto_buf[0] == '0' && (g_goto_buf[1] == 'x' || g_goto_buf[1] == 'X')) {
+		g_goto_buf += 2;
+	}
+	int buf_len = strlen(g_goto_buf);
+	for (int i = 0; i < buf_len; i++) {
+		int ele = *(g_goto_buf + i);
+		if (ele < 0 || ele > 255) {
+			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+			return FALSE;
+		}
+		if (!isxdigit(ele)) {
+			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+			return FALSE;
+		}
+	}
+
+	// then check current list view
+	// do it later
+
+	long addr;
+	sscanf(g_goto_buf, "%x", &addr);
+	addr = addr / 16;
+
+	long last_row = g_sz / 16;
+	if (addr > last_row || addr < 0) {
+		MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+		return FALSE;
+	}
+	ListView_EnsureVisible(hListView, addr, 0);
+
+}
+
+BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+	switch (Message)
+	{
+	case WM_INITDIALOG:
+		break;
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case ID_GOTO_OK: {
+			// go
+			HWND hEdit = GetDlgItem(hwnd, IDC_GOTO_EDIT);
+			size_t buffer_len = (GetWindowTextLength(hEdit) + 1) * sizeof(char);
+			g_goto_buf = (char *)malloc(buffer_len);
+			if (g_goto_buf)
+			{
+				GetDlgItemText(hwnd, IDC_GOTO_EDIT, (LPTSTR)g_goto_buf, buffer_len);
+				//MessageBox(0, szText, TEXT("title"), 0);
+				//free(szText);
+				//szText = NULL;
+			}
+			go();
+			EndDialog(hwnd, 1);
+		}
+			break;
+		}
+		break;
+	case WM_SYSCOMMAND:
+		if (SC_CLOSE == wParam) {
+			EndDialog(hwnd, 0);
+		}
+		// go to default so user can move dialog window
+		return FALSE;
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
 
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
