@@ -192,6 +192,69 @@ BOOL go() {
 	g_goto_buf = NULL;
 }
 
+char * typical_three_col_print(int row, int col, long base_addr, long end_addr) {
+	/*
+	start from, end, row, col, left
+	*/
+	int offset = row * 16 + base_addr; // magic number 16 : one line contains 16 bytes
+	char addr[50];
+	char data[100];
+	char ascii[100];
+	// last line
+	if (offset + (16 - 1) > end_addr) {
+		int left = end_addr - offset;
+		char left_data[100] = "";
+		char left_tmp[30] = "";
+		char left_ascii[100] = "";
+		// I don't like this part, refine later
+		for (int i = 0; i < left; i++) {
+			wsprintf(left_tmp, "%02x ", g_content[offset + i]);
+			strcat(left_data, left_tmp);
+			wsprintf(left_tmp, "%01c", ascii_convert(g_content[offset + i]));
+			strcat(left_ascii, left_tmp);
+		}
+		// fill to fix width
+		while (strlen(left_data) < 48) {
+			strcat(left_data, " ");
+		}
+		while (strlen(left_ascii) < 16) {
+			strcat(left_ascii, " ");
+		}
+		// pass data
+		if (col == 0) {
+			wsprintf(addr, "%08x", row * 16 + base_addr);
+			return strupr(addr);
+		}
+		else if (col == 1){
+			return strupr(left_data);
+		}
+		else if (col == 2) {
+			return left_ascii;
+		}
+	}
+	// not last line
+	else {
+		if (col == 0) {
+			wsprintf(addr, "%08x", row * 16 + base_addr);
+			return strupr(addr);
+		}
+		else if (col == 1) {
+			wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x", g_content[offset], g_content[offset + 1], g_content[offset + 2],
+				g_content[offset + 3], g_content[offset + 4], g_content[offset + 5], g_content[offset + 6], g_content[offset + 7], g_content[offset + 8],
+				g_content[offset + 9], g_content[offset + 10], g_content[offset + 11], g_content[offset + 12], g_content[offset + 13], g_content[offset + 14],
+				g_content[offset + 15]);
+			return strupr(data);
+		}
+		else if (col == 2) {
+			wsprintf(ascii, "%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c", ascii_convert(g_content[offset]), ascii_convert(g_content[offset + 1]), ascii_convert(g_content[offset + 2]),
+				ascii_convert(g_content[offset + 3]), ascii_convert(g_content[offset + 4]), ascii_convert(g_content[offset + 5]), ascii_convert(g_content[offset + 6]), ascii_convert(g_content[offset + 7]), ascii_convert(g_content[offset + 8]),
+				ascii_convert(g_content[offset + 9]), ascii_convert(g_content[offset + 10]), ascii_convert(g_content[offset + 11]), ascii_convert(g_content[offset + 12]), ascii_convert(g_content[offset + 13]), ascii_convert(g_content[offset + 14]),
+				ascii_convert(g_content[offset + 15]));
+			return ascii;
+		}
+	}
+}
+
 void rec_tree_gen(struct tree_node * node, HTREEITEM parent) {
 	if (node == NULL) return;
 	HTREEITEM hNode = add_node(node->name, parent, TVI_LAST);
@@ -268,7 +331,8 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				ListView_SetItemCountEx(hListView, (dos_header.e_lfanew - 0x40) / 16 + ((dos_header.e_lfanew - 0x40) % 16 == 0 ? 0 : 1), NULL);
 			}
 			else if (strcmp(buf, "IMAGE_NT_HEADERS") == 0) {
-
+				add_cols(g_col_style1);
+				ListView_SetItemCountEx(hListView, sizeof(IMAGE_NT_HEADERS) / 16 + (sizeof(IMAGE_NT_HEADERS) % 16 == 0 ? 0 : 1), NULL);
 			}
 		}
 	} /*if (NM_CLICK == lpnmh->code) end*/
@@ -279,63 +343,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		int col = plvdi->item.iSubItem;
 		// when click file name (tree view root) - maybe a little bit messy, reconstruct later
 		if (strcmp(g_last_click, g_filename) == 0) {
-			int offset = row * 16; // magic number 16 : one line contains 16 bytes
-			char addr[50];
-			char data[100];
-			char ascii[100];
-			// last line
-			if (offset + (16 - 1) > g_sz) {
-				int left = g_sz - offset;
-				char left_data[100] = "";
-				char left_tmp[30] = "";
-				char left_ascii[100] = "";
-				// I don't like this part, refine later
-				for (int i = 0; i < left; i++) {
-					wsprintf(left_tmp, "%02x ", g_content[offset + i]);
-					strcat(left_data, left_tmp);
-					wsprintf(left_tmp, "%01c", ascii_convert(g_content[offset + i]));
-					strcat(left_ascii, left_tmp);
-				}
-				// fill to fix width
-				while (strlen(left_data) < 48) {
-					strcat(left_data, " ");
-				}
-				while (strlen(left_ascii) < 16) {
-					strcat(left_ascii, " ");
-				}
-				// pass data
-				if (col == 0) {
-					wsprintf(addr, "%08x", row * 16);
-					plvdi->item.pszText = strupr(addr);
-				}
-				else if (col == 1){
-					plvdi->item.pszText = strupr(left_data);
-				}
-				else if (col == 2) {
-					plvdi->item.pszText = left_ascii;
-				}
-			}
-			// not last line
-			else {
-				if (col == 0) {
-					wsprintf(addr, "%08x", row * 16);
-					plvdi->item.pszText = strupr(addr);
-				}
-				else if (col == 1) {
-					wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x", g_content[offset], g_content[offset + 1], g_content[offset + 2],
-						g_content[offset + 3], g_content[offset + 4], g_content[offset + 5], g_content[offset + 6], g_content[offset + 7], g_content[offset + 8],
-						g_content[offset + 9], g_content[offset + 10], g_content[offset + 11], g_content[offset + 12], g_content[offset + 13], g_content[offset + 14],
-						g_content[offset + 15]);
-					plvdi->item.pszText = strupr(data);
-				}
-				else if (col == 2) {
-					wsprintf(ascii, "%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c", ascii_convert(g_content[offset]), ascii_convert(g_content[offset + 1]), ascii_convert(g_content[offset + 2]),
-						ascii_convert(g_content[offset + 3]), ascii_convert(g_content[offset + 4]), ascii_convert(g_content[offset + 5]), ascii_convert(g_content[offset + 6]), ascii_convert(g_content[offset + 7]), ascii_convert(g_content[offset + 8]),
-						ascii_convert(g_content[offset + 9]), ascii_convert(g_content[offset + 10]), ascii_convert(g_content[offset + 11]), ascii_convert(g_content[offset + 12]), ascii_convert(g_content[offset + 13]), ascii_convert(g_content[offset + 14]),
-						ascii_convert(g_content[offset + 15]));
-					plvdi->item.pszText = ascii;
-				}
-			}
+			plvdi->item.pszText = typical_three_col_print(row, col, 0, g_sz);
 		}
 		else if (strcmp(g_last_click, "IMAGE_DOS_HEADER") == 0) {
 			char addr[50];
@@ -455,63 +463,10 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 		else if (strcmp(g_last_click, "DOS Stub") == 0) {
-			int offset = row * 16 + 0x40; // magic number 16 : one line contains 16 bytes
-			char addr[50];
-			char data[100];
-			char ascii[100];
-			// last line
-			if (offset + (16 - 1) > dos_header.e_lfanew - 1) {
-				int left = dos_header.e_lfanew - 1 - offset;
-				char left_data[100] = "";
-				char left_tmp[30] = "";
-				char left_ascii[100] = "";
-				// I don't like this part, refine later
-				for (int i = 0; i < left; i++) {
-					wsprintf(left_tmp, "%02x ", g_content[offset + i]);
-					strcat(left_data, left_tmp);
-					wsprintf(left_tmp, "%01c", ascii_convert(g_content[offset + i]));
-					strcat(left_ascii, left_tmp);
-				}
-				// fill to fix width
-				while (strlen(left_data) < 48) {
-					strcat(left_data, " ");
-				}
-				while (strlen(left_ascii) < 16) {
-					strcat(left_ascii, " ");
-				}
-				// pass data
-				if (col == 0) {
-					wsprintf(addr, "%08x", row * 16 + 0x40);
-					plvdi->item.pszText = strupr(addr);
-				}
-				else if (col == 1){
-					plvdi->item.pszText = strupr(left_data);
-				}
-				else if (col == 2) {
-					plvdi->item.pszText = left_ascii;
-				}
-			}
-			// not last line
-			else {
-				if (col == 0) {
-					wsprintf(addr, "%08x", row * 16 + 0x40);
-					plvdi->item.pszText = strupr(addr);
-				}
-				else if (col == 1) {
-					wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x", g_content[offset], g_content[offset + 1], g_content[offset + 2],
-						g_content[offset + 3], g_content[offset + 4], g_content[offset + 5], g_content[offset + 6], g_content[offset + 7], g_content[offset + 8],
-						g_content[offset + 9], g_content[offset + 10], g_content[offset + 11], g_content[offset + 12], g_content[offset + 13], g_content[offset + 14],
-						g_content[offset + 15]);
-					plvdi->item.pszText = strupr(data);
-				}
-				else if (col == 2) {
-					wsprintf(ascii, "%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c", ascii_convert(g_content[offset]), ascii_convert(g_content[offset + 1]), ascii_convert(g_content[offset + 2]),
-						ascii_convert(g_content[offset + 3]), ascii_convert(g_content[offset + 4]), ascii_convert(g_content[offset + 5]), ascii_convert(g_content[offset + 6]), ascii_convert(g_content[offset + 7]), ascii_convert(g_content[offset + 8]),
-						ascii_convert(g_content[offset + 9]), ascii_convert(g_content[offset + 10]), ascii_convert(g_content[offset + 11]), ascii_convert(g_content[offset + 12]), ascii_convert(g_content[offset + 13]), ascii_convert(g_content[offset + 14]),
-						ascii_convert(g_content[offset + 15]));
-					plvdi->item.pszText = ascii;
-				}
-			}
+			plvdi->item.pszText = typical_three_col_print(row, col, 0x40, dos_header.e_lfanew);
+		}
+		else if (strcmp(g_last_click, "IMAGE_NT_HEADERS") == 0) {
+			plvdi->item.pszText = typical_three_col_print(row, col, dos_header.e_lfanew, dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS));
 		}
 	}
 }
@@ -555,7 +510,6 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				  break;
 	} /*switch (LOWORD(wParam))*/
 }
-
 
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
