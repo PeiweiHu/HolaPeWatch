@@ -208,18 +208,60 @@ unsigned char * all_content(char * path) {
 	}
 }
 
+/* tree structure to save tree view item */
 
-char ** get_first_level() {
-	char ** first_level = (char **)malloc(100 * sizeof(char*));
-	first_level[0] = "IMAGE_DOS_HEADER";
-	first_level[1] = "DOS Stub";
-	first_level[2] = "IMAGE_NT_HEADERS";
+/*
+struct tree_node {
+	char * name;
+	struct tree_node *sub_node;
+	struct tree_node *sibling;
+};
+*/
+
+struct tree_node * get_tree_view() {
+	struct tree_node *root = (struct tree_node *)malloc(sizeof(struct tree_node));
+	root->name = "ROOT";
+	root->sibling = NULL;
+
+	// struct tree_node tmp = { "IMAGE_DOS_HEADER", NULL, NULL };
+	struct tree_node * tmp = (struct tree_node *)malloc(sizeof(struct tree_node));
+	root->sub_node = tmp;
+	tmp->name = "IMAGE_DOS_HEADER";
+	tmp->sub_node = NULL;
+
+	tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+	tmp = tmp->sibling;
+	tmp->name = "DOS Stub";
+	tmp->sub_node = NULL;
+
+
+	tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+	tmp = tmp->sibling;
+	tmp->name = "IMAGE_NT_HEADERS";
+	// sub node
+	struct tree_node * sub_tmp = (struct tree_node *)malloc(sizeof(struct tree_node));
+	tmp->sub_node = sub_tmp;
+	sub_tmp->name = "Signature";
+	sub_tmp->sub_node = NULL;
+	sub_tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+	sub_tmp = sub_tmp->sibling;
+	sub_tmp->name = "IMAGE_FILE_HEADER";
+	sub_tmp->sub_node = NULL;
+	sub_tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+	sub_tmp = sub_tmp->sibling;
+	sub_tmp->name = "IMAGE_OPTIONAL_HEADER";
+	sub_tmp->sub_node = NULL;
+	sub_tmp->sibling = NULL;
+
+	// start constructing section header
 	for (int i = 0; i < number_of_sections; i++) {
 		char * prefix = (char *)malloc(MAX_PATH);
 		strcpy(prefix, "IMAGE_SECTION_HEADER ");
-		first_level[3 + i] = strcat(prefix, (char*)section_header[i].Name);
-		//free(prefix);
+		tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+		tmp = tmp->sibling;
+		tmp->name = strcat(prefix, (char*)section_header[i].Name);
+		tmp->sub_node = NULL;
 	}
-	first_level[3 + number_of_sections] = "END";
-	return first_level;
+	tmp->sibling = NULL;
+	return root;
 }

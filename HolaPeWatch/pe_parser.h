@@ -12,6 +12,12 @@ struct error_struct {
 	struct error_struct * next;
 };
 
+struct tree_node {
+	char * name;
+	struct tree_node *sub_node;
+	struct tree_node *sibling;
+};
+
 
 // var decl
 // for pe handle
@@ -40,3 +46,4 @@ void add_error(char * reason, int level);
 int need_terminate();
 char ** get_key_error();
 int get_error_cnt();
+struct tree_node * get_tree_view();

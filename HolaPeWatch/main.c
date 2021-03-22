@@ -153,6 +153,17 @@ char ascii_convert(unsigned char _ch) {
 }
 
 
+void rec_tree_gen(struct tree_node * node, HTREEITEM parent) {
+	if (node == NULL) return;
+	HTREEITEM hNode = add_node(node->name, parent, TVI_LAST);
+	if (node->sub_node != NULL) {
+		rec_tree_gen(node->sub_node, hNode);
+	}
+	if (node->sibling != NULL) {
+		rec_tree_gen(node->sibling, parent);
+	}
+}
+
 void do_create(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	// create right list view
 	hListView = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, "",
@@ -309,18 +320,16 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			assign_var(g_filepath);
 
 			// generate tree view
-			char ** res = get_first_level();
+			struct tree_node * node = get_tree_view();
 			HTREEITEM root = add_node(g_filename, NULL, TVI_FIRST);
-			int i = 0;
-			while (res[i] != "END") {
-				add_node(res[i++], root, TVI_LAST);
-			}
+			rec_tree_gen(node->sub_node, root);
+
+
 		}
 	}
 					   break;
 	case ID_GOTO: {
-		int ret = DialogBox(GetModuleHandle(NULL),
-			MAKEINTRESOURCE(IDD_GOTO), hwnd, GotoDlgProc);
+		int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_GOTO), hwnd, GotoDlgProc);
 	}
 				  break;
 	} /*switch (LOWORD(wParam))*/
