@@ -16,15 +16,22 @@
 typedef struct col_style_s {
 	int width;
 	char * name;
+	int position;
 } col_style;
 
 col_style g_col_style1[4] = {
-	{ ADDRESS_WIDTH, "address" },
-	{ DATA_WIDTH, "data" },
-	{ ASCII_WIDTH, "ascii" },
-	{ 0, "END" }
+	{ ADDRESS_WIDTH, "address", LVCFMT_CENTER },
+	{ DATA_WIDTH, "data", LVCFMT_CENTER },
+	{ ASCII_WIDTH, "ascii", LVCFMT_CENTER },
+	{ 0, "END", 0 }
 };
 
+col_style g_col_style2[4] = {
+	{ ADDRESS_WIDTH, "address", LVCFMT_CENTER },
+	{ DATA_WIDTH - 250, "data", LVCFMT_CENTER },
+	{ ASCII_WIDTH + 250, "description", LVCFMT_LEFT },
+	{ 0, "END", 0 }
+};
 
 // global variable
 WNDCLASSEX MainWnd;
@@ -41,10 +48,11 @@ long g_sz;                           // size of the selected file
 char *g_goto_buf = NULL;
 
 
-// function decl
+// function declaration
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
+// function defination
 void register_window() {
 	// register MainWnd
 	MainWnd.cbSize = sizeof(WNDCLASSEX);
@@ -89,9 +97,7 @@ void create_window(int nCmdShow) {
 	UpdateWindow(hMainWnd);
 }
 
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-	LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	register_window();
 	create_window(nCmdShow);
 
@@ -103,8 +109,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	return 0;
 }
 
-/*-----------------------------------------List view and tree view manipulation-------------------------------------*/
-
 // add tree node to left area 
 HTREEITEM add_node(LPSTR txt, HTREEITEM parent, HTREEITEM after) {
 	TVINSERTSTRUCT ts = { 0 }; // TreeView Insert Struct
@@ -115,7 +119,6 @@ HTREEITEM add_node(LPSTR txt, HTREEITEM parent, HTREEITEM after) {
 	return TreeView_InsertItem(hTreeView, &ts);
 }
 
-// cols is a string array which ends with "END", e.g. char * buf[] = {"col1", "col2", "END" };
 void add_cols(col_style cols[]) {
 	// delete old cols
 	HWND hHeader = ListView_GetHeader(hListView);
@@ -131,7 +134,7 @@ void add_cols(col_style cols[]) {
 		lvc.cchTextMax = MAX_PATH;
 		lvc.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
 		lvc.cx = cols[col_cnt].width;
-		lvc.fmt = LVCFMT_CENTER;
+		lvc.fmt = cols[col_cnt].position;
 		//lvc.fmt = LVCFMT_LEFT;
 		lvc.pszText = cols[col_cnt].name;
 		ListView_InsertColumn(hListView, col_cnt, &lvc);
@@ -139,8 +142,6 @@ void add_cols(col_style cols[]) {
 	}
 	return;
 }
-
-/*--------------------------------------List view and tree view manipulation end------------------------------------*/
 
 char ascii_convert(unsigned char _ch) {
 	long ch = (long)_ch;
@@ -152,6 +153,44 @@ char ascii_convert(unsigned char _ch) {
 	}
 }
 
+// check g_goto_buf
+BOOL go() {
+	if (g_goto_buf == NULL) return FALSE;
+	// first check format
+	// remove 0x 0X
+	if (g_goto_buf[0] == '0' && (g_goto_buf[1] == 'x' || g_goto_buf[1] == 'X')) {
+		g_goto_buf[0] = '0';
+		g_goto_buf[1] = '0';
+	}
+	int buf_len = strlen(g_goto_buf);
+	for (int i = 0; i < buf_len; i++) {
+		int ele = *(g_goto_buf + i);
+		if (ele < 0 || ele > 255) {
+			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+			return FALSE;
+		}
+		if (!isxdigit(ele)) {
+			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+			return FALSE;
+		}
+	}
+
+	// then check current list view
+	// do it later
+
+	long addr;
+	sscanf(g_goto_buf, "%x", &addr);
+	addr = addr / 16;
+
+	long last_row = g_sz / 16;
+	if (addr > last_row || addr < 0) {
+		MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+		return FALSE;
+	}
+	ListView_EnsureVisible(hListView, addr, 0);
+	free(g_goto_buf);
+	g_goto_buf = NULL;
+}
 
 void rec_tree_gen(struct tree_node * node, HTREEITEM parent) {
 	if (node == NULL) return;
@@ -220,7 +259,8 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				ListView_SetItemCountEx(hListView, g_sz / 16 + 1, NULL);
 			}
 			else if (strcmp(buf, "IMAGE_DOS_HEADER") == 0) {
-
+				add_cols(g_col_style2);
+				ListView_SetItemCountEx(hListView, 31, NULL);
 			}
 			else if (strcmp(buf, "IMAGE_NT_HEADERS") == 0) {
 
@@ -233,11 +273,11 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		int row = plvdi->item.iItem;
 		int col = plvdi->item.iSubItem;
 		int offset = row * 16; // magic number 16 : one line contains 16 bytes
-		char addr[50];
-		char data[100];
-		char ascii[100];
 		// when click file name (tree view root) - maybe a little bit messy, reconstruct later
 		if (strcmp(g_last_click, g_filename) == 0) {
+			char addr[50];
+			char data[100];
+			char ascii[100];
 			// last line
 			if (offset + (16 - 1) > g_sz) {
 				int left = g_sz - offset;
@@ -292,6 +332,123 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				}
 			}
 		}
+		else if (strcmp(g_last_click, "DOS Stub")) {
+			char addr[50];
+			char data[100];
+			char desc[100];
+			if (col == 0) {
+				long laddr = row * 2;
+				wsprintf(addr, "%08x", laddr);
+				plvdi->item.pszText = strupr(addr);
+			}
+			else if (col == 1) {
+				if (row <= 29) { // magic number - 29 : corresponding to struct _IMAGE_DOS_HEADER
+					wsprintf(data, "%02x%02x", g_content[row * 2 + 1], g_content[row * 2]);
+					plvdi->item.pszText = strupr(data);
+				}
+				else if (row == 30) {
+					wsprintf(data, "%02x%02x%02x%02x", g_content[row * 2 + 3], g_content[row * 2 + 2], g_content[row * 2 + 1], g_content[row * 2]);
+					plvdi->item.pszText = strupr(data);
+				}
+			}
+			else if (col == 2) {
+				switch (row) {
+				case 0:
+					plvdi->item.pszText = "e_magic, dos signature";
+					break;
+				case 1:
+					plvdi->item.pszText = "e_cblp, bytes on last page of file";
+					break;
+				case 2:
+					plvdi->item.pszText = "e_cp, pages in file";
+					break;
+				case 3:
+					plvdi->item.pszText = "e_crlc, relocations";
+					break;
+				case 4:
+					plvdi->item.pszText = "e_cparhdr, size of header in paragraphs";
+					break;
+				case 5:
+					plvdi->item.pszText = "e_minalloc, minimun extra paragraphs needs";
+					break;
+				case 6:
+					plvdi->item.pszText = "e_maxalloc, maximun extra paragraphs needs";
+					break;
+				case 7:
+					plvdi->item.pszText = "e_ss, intial (relative) ss value";
+					break;
+				case 8:
+					plvdi->item.pszText = "e_sp, intial sp value";
+					break;
+				case 9:
+					plvdi->item.pszText = "e_csum, checksum";
+					break;
+				case 10:
+					plvdi->item.pszText = "e_ip, intial ip value";
+					break;
+				case 11:
+					plvdi->item.pszText = "e_cs, intial (relative) cs value";
+					break;
+				case 12:
+					plvdi->item.pszText = "e_lfarlc, file address of relocation table";
+					break;
+				case 13:
+					plvdi->item.pszText = "e_ovno, overlay number";
+					break;
+				case 14:
+					plvdi->item.pszText = "e_res[0], reserved words";
+					break;
+				case 15:
+					plvdi->item.pszText = "e_res[1], reserved words";
+					break;
+				case 16:
+					plvdi->item.pszText = "e_res[2], reserved words";
+					break;
+				case 17:
+					plvdi->item.pszText = "e_res[3], reserved words";
+					break;
+				case 18:
+					plvdi->item.pszText = "e_oemid, oem identifier (for e_oeminfo)";
+					break;
+				case 19:
+					plvdi->item.pszText = "e_oeminfo, oem information, e_oemid specific";
+					break;
+				case 20:
+					plvdi->item.pszText = "e_res2[0], reserved words";
+					break;
+				case 21:
+					plvdi->item.pszText = "e_res2[1], reserved words";
+					break;
+				case 22:
+					plvdi->item.pszText = "e_res2[2], reserved words";
+					break;
+				case 23:
+					plvdi->item.pszText = "e_res2[3], reserved words";
+					break;
+				case 24:
+					plvdi->item.pszText = "e_res2[4], reserved words";
+					break;
+				case 25:
+					plvdi->item.pszText = "e_res2[5], reserved words";
+					break;
+				case 26:
+					plvdi->item.pszText = "e_res2[6], reserved words";
+					break;
+				case 27:
+					plvdi->item.pszText = "e_res2[7], reserved words";
+					break;
+				case 28:
+					plvdi->item.pszText = "e_res2[8], reserved words";
+					break;
+				case 29:
+					plvdi->item.pszText = "e_res2[9], reserved words";
+					break;
+				case 30:
+					plvdi->item.pszText = "e_lfanew, offset to start of pe header";
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -335,44 +492,6 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	} /*switch (LOWORD(wParam))*/
 }
 
-// check g_goto_buf
-BOOL go() {
-	if (g_goto_buf == NULL) return FALSE;
-	// first check format
-	// remove 0x 0X
-	if (g_goto_buf[0] == '0' && (g_goto_buf[1] == 'x' || g_goto_buf[1] == 'X')) {
-		g_goto_buf[0] = '0';
-		g_goto_buf[1] = '0';
-	}
-	int buf_len = strlen(g_goto_buf);
-	for (int i = 0; i < buf_len; i++) {
-		int ele = *(g_goto_buf + i);
-		if (ele < 0 || ele > 255) {
-			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
-			return FALSE;
-		}
-		if (!isxdigit(ele)) {
-			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
-			return FALSE;
-		}
-	}
-
-	// then check current list view
-	// do it later
-
-	long addr;
-	sscanf(g_goto_buf, "%x", &addr);
-	addr = addr / 16;
-
-	long last_row = g_sz / 16;
-	if (addr > last_row || addr < 0) {
-		MessageBox(hMainWnd, "Invalid address", "Error", NULL);
-		return FALSE;
-	}
-	ListView_EnsureVisible(hListView, addr, 0);
-	free(g_goto_buf);
-	g_goto_buf = NULL;
-}
 
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
