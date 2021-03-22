@@ -251,6 +251,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			TreeView_GetItem(lpnmh->hwndFrom, &ti);
 			// save the clicked item to g_last_click
 			if (strlen(buf) != 0) {
+				//MessageBox(hMainWnd, buf, buf, NULL);
 				strcpy(g_last_click, buf);
 			}
 			// response
@@ -332,10 +333,10 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				}
 			}
 		}
-		else if (strcmp(g_last_click, "DOS Stub")) {
+		else if (strcmp(g_last_click, "IMAGE_DOS_HEADER") == 0) {
 			char addr[50];
 			char data[100];
-			char desc[100];
+			//char desc[100];
 			if (col == 0) {
 				long laddr = row * 2;
 				wsprintf(addr, "%08x", laddr);
