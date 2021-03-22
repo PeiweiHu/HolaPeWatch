@@ -257,11 +257,15 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			// response
 			if (strcmp(buf, g_filename) == 0) {
 				add_cols(g_col_style1);
-				ListView_SetItemCountEx(hListView, g_sz / 16 + 1, NULL);
+				ListView_SetItemCountEx(hListView, g_sz / 16 + (g_sz % 16 == 0 ? 0 : 1), NULL);
 			}
 			else if (strcmp(buf, "IMAGE_DOS_HEADER") == 0) {
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 31, NULL);
+			}
+			else if (strcmp(buf, "DOS Stub") == 0) {
+				add_cols(g_col_style1);
+				ListView_SetItemCountEx(hListView, (dos_header.e_lfanew - 0x40) / 16 + ((dos_header.e_lfanew - 0x40) % 16 == 0 ? 0 : 1), NULL);
 			}
 			else if (strcmp(buf, "IMAGE_NT_HEADERS") == 0) {
 
@@ -273,9 +277,9 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lpnmh;
 		int row = plvdi->item.iItem;
 		int col = plvdi->item.iSubItem;
-		int offset = row * 16; // magic number 16 : one line contains 16 bytes
 		// when click file name (tree view root) - maybe a little bit messy, reconstruct later
 		if (strcmp(g_last_click, g_filename) == 0) {
+			int offset = row * 16; // magic number 16 : one line contains 16 bytes
 			char addr[50];
 			char data[100];
 			char ascii[100];
@@ -447,6 +451,65 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				case 30:
 					plvdi->item.pszText = "e_lfanew, offset to start of pe header";
 					break;
+				}
+			}
+		}
+		else if (strcmp(g_last_click, "DOS Stub") == 0) {
+			int offset = row * 16 + 0x40; // magic number 16 : one line contains 16 bytes
+			char addr[50];
+			char data[100];
+			char ascii[100];
+			// last line
+			if (offset + (16 - 1) > dos_header.e_lfanew - 1) {
+				int left = dos_header.e_lfanew - 1 - offset;
+				char left_data[100] = "";
+				char left_tmp[30] = "";
+				char left_ascii[100] = "";
+				// I don't like this part, refine later
+				for (int i = 0; i < left; i++) {
+					wsprintf(left_tmp, "%02x ", g_content[offset + i]);
+					strcat(left_data, left_tmp);
+					wsprintf(left_tmp, "%01c", ascii_convert(g_content[offset + i]));
+					strcat(left_ascii, left_tmp);
+				}
+				// fill to fix width
+				while (strlen(left_data) < 48) {
+					strcat(left_data, " ");
+				}
+				while (strlen(left_ascii) < 16) {
+					strcat(left_ascii, " ");
+				}
+				// pass data
+				if (col == 0) {
+					wsprintf(addr, "%08x", row * 16 + 0x40);
+					plvdi->item.pszText = strupr(addr);
+				}
+				else if (col == 1){
+					plvdi->item.pszText = strupr(left_data);
+				}
+				else if (col == 2) {
+					plvdi->item.pszText = left_ascii;
+				}
+			}
+			// not last line
+			else {
+				if (col == 0) {
+					wsprintf(addr, "%08x", row * 16 + 0x40);
+					plvdi->item.pszText = strupr(addr);
+				}
+				else if (col == 1) {
+					wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x", g_content[offset], g_content[offset + 1], g_content[offset + 2],
+						g_content[offset + 3], g_content[offset + 4], g_content[offset + 5], g_content[offset + 6], g_content[offset + 7], g_content[offset + 8],
+						g_content[offset + 9], g_content[offset + 10], g_content[offset + 11], g_content[offset + 12], g_content[offset + 13], g_content[offset + 14],
+						g_content[offset + 15]);
+					plvdi->item.pszText = strupr(data);
+				}
+				else if (col == 2) {
+					wsprintf(ascii, "%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c%01c", ascii_convert(g_content[offset]), ascii_convert(g_content[offset + 1]), ascii_convert(g_content[offset + 2]),
+						ascii_convert(g_content[offset + 3]), ascii_convert(g_content[offset + 4]), ascii_convert(g_content[offset + 5]), ascii_convert(g_content[offset + 6]), ascii_convert(g_content[offset + 7]), ascii_convert(g_content[offset + 8]),
+						ascii_convert(g_content[offset + 9]), ascii_convert(g_content[offset + 10]), ascii_convert(g_content[offset + 11]), ascii_convert(g_content[offset + 12]), ascii_convert(g_content[offset + 13]), ascii_convert(g_content[offset + 14]),
+						ascii_convert(g_content[offset + 15]));
+					plvdi->item.pszText = ascii;
 				}
 			}
 		}
