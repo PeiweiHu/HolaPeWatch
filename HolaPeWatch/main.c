@@ -266,6 +266,60 @@ void rec_tree_gen(struct tree_node * node, HTREEITEM parent) {
 	}
 }
 
+char * convert_time_stamp(INT64 time_stamp) {
+	// first convert time stamp to file time
+	INT64 nll = (INT64)time_stamp * 10000000 + 116444736000000000;
+	FILETIME file_time;
+	file_time.dwLowDateTime = (DWORD)nll;
+	file_time.dwHighDateTime = nll >> 32;
+	// then convert file time to system time
+	SYSTEMTIME sys_time;
+	FileTimeToSystemTime(&file_time, &sys_time);
+	// construct time string
+	char * rtn_time = (char *)malloc(MAX_PATH);
+	char *mon = NULL;
+	switch (sys_time.wMonth) {
+	case 1:
+		mon = "January";
+		break;
+	case 2:
+		mon = "February";
+		break;
+	case 3:
+		mon = "March";
+		break;
+	case 4:
+		mon = "April";
+		break;
+	case 5:
+		mon = "May";
+		break;
+	case 6:
+		mon = "June";
+		break;
+	case 7:
+		mon = "July";
+		break;
+	case 8:
+		mon = "August";
+		break;
+	case 9:
+		mon = "September";
+		break;
+	case 10:
+		mon = "October";
+		break;
+	case 11:
+		mon = "November";
+		break;
+	case 12:
+		mon = "December";
+		break;
+	}
+	wsprintf(rtn_time, "%02d:%02d:%02d, %s, %d, %04d", sys_time.wHour, sys_time.wMinute, sys_time.wSecond, mon, sys_time.wDay, sys_time.wYear);
+	return rtn_time;
+}
+
 void do_create(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	// create right list view
 	hListView = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, "",
@@ -333,6 +387,18 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			else if (strcmp(buf, "IMAGE_NT_HEADERS") == 0) {
 				add_cols(g_col_style1);
 				ListView_SetItemCountEx(hListView, sizeof(IMAGE_NT_HEADERS) / 16 + (sizeof(IMAGE_NT_HEADERS) % 16 == 0 ? 0 : 1), NULL);
+			}
+			else if (strcmp(buf, "Signature") == 0) {
+				add_cols(g_col_style2);
+				ListView_SetItemCountEx(hListView, 1, NULL);
+			}
+			else if (strcmp(buf, "IMAGE_FILE_HEADER") == 0) {
+				add_cols(g_col_style2);
+				ListView_SetItemCountEx(hListView, 7, NULL);
+			}
+			else if (strcmp(buf, "IMAGE_OPTIONAL_HEADER") == 0) {
+				add_cols(g_col_style2);
+				ListView_SetItemCountEx(hListView, 46 + 16, NULL);
 			}
 		}
 	} /*if (NM_CLICK == lpnmh->code) end*/
@@ -467,6 +533,356 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		}
 		else if (strcmp(g_last_click, "IMAGE_NT_HEADERS") == 0) {
 			plvdi->item.pszText = typical_three_col_print(row, col, dos_header.e_lfanew, dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS));
+		}
+		else if (strcmp(g_last_click, "Signature") == 0) {
+			if (row == 0) {
+				if (col == 0) {
+					char addr[30];
+					wsprintf(addr, "%08x", dos_header.e_lfanew);
+					plvdi->item.pszText = addr;
+				}
+				else if (col == 1) {
+					char data[30];
+					wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 3], g_content[dos_header.e_lfanew + 2], g_content[dos_header.e_lfanew + 1], g_content[dos_header.e_lfanew]);
+					plvdi->item.pszText = data;
+				}
+				else if (col == 2) {
+					plvdi->item.pszText = "PE00, IMAGE_NT_SIGNATURE";
+				}
+			}
+		}
+		else if (strcmp(g_last_click, "IMAGE_FILE_HEADER") == 0) {
+			if (col == 0) {
+				char addr[30];
+				switch (row) {
+				case 0:
+					// Machine
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				case 1:
+					// NumberOfSections
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4 + 2);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				case 2:
+					// TimeDateStamp
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4 + 2 + 2);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				case 3:
+					// PointerToSymbolTable
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4 + 2 + 2 + 4);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				case 4:
+					// NumberOfSymbols
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4 + 2 + 2 + 4 + 4);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				case 5:
+					// SizeOfOptionalHeader
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4 + 2 + 2 + 4 + 4 + 4);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				case 6:
+					// Characteristics
+					wsprintf(addr, "%08x", dos_header.e_lfanew + 4 + 2 + 2 + 4 + 4 + 4 + 2);
+					plvdi->item.pszText = strupr(addr);
+					break;
+				}
+			}
+			else if (col == 1) {
+				char data[30];
+				switch (row) {
+					case 0:
+						// Machine
+						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 4 + 1], g_content[dos_header.e_lfanew + 4]);
+						plvdi->item.pszText = strupr(data);
+						break;
+					case 1:
+						// NumberOfSections
+						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 6 + 1], g_content[dos_header.e_lfanew + 6]);
+						plvdi->item.pszText = strupr(data);
+						break;
+					case 2:
+						// TimeDateStamp
+						wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 8 + 3], g_content[dos_header.e_lfanew + 8 + 2], g_content[dos_header.e_lfanew + 8 + 1], g_content[dos_header.e_lfanew + 8]);
+						plvdi->item.pszText = strupr(data);
+						break;
+					case 3:
+						// PointerToSymbolTable
+						wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 12 + 3], g_content[dos_header.e_lfanew + 12 + 2], g_content[dos_header.e_lfanew + 12 + 1], g_content[dos_header.e_lfanew + 12]);
+						plvdi->item.pszText = strupr(data);
+						break;
+					case 4:
+						// NumberOfSymbols
+						wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 16 + 3], g_content[dos_header.e_lfanew + 16 + 2], g_content[dos_header.e_lfanew + 16 + 1], g_content[dos_header.e_lfanew + 16]);
+						plvdi->item.pszText = strupr(data);
+						break;
+					case 5:
+						// SizeOfOptionalHeader
+						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 20 + 1], g_content[dos_header.e_lfanew + 20]);
+						plvdi->item.pszText = strupr(data);
+						break;
+					case 6:
+						// Characteristics
+						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 22 + 1], g_content[dos_header.e_lfanew + 22]);
+						plvdi->item.pszText = strupr(data);
+						break;
+				}
+			}
+			else if (col == 2) {
+				switch (row) {
+				case 0:
+					// Machine
+					plvdi->item.pszText = "Machine";
+					break;
+				case 1:
+					// NumberOfSections
+					plvdi->item.pszText = "Number Of Sections";
+					break;
+				case 2: {
+					// TimeDateStamp
+					UINT64 time_stamp = 0;
+					time_stamp = time_stamp | g_content[dos_header.e_lfanew + 8 + 3];
+					time_stamp = time_stamp << 8;
+					time_stamp = time_stamp | g_content[dos_header.e_lfanew + 8 + 2];
+					time_stamp = time_stamp << 8;
+					time_stamp = time_stamp | g_content[dos_header.e_lfanew + 8 + 1];
+					time_stamp = time_stamp << 8;
+					time_stamp = time_stamp | g_content[dos_header.e_lfanew + 8];
+
+					//DWORD time_stamp = g_content[dos_header.e_lfanew + 8];
+					char * rtn_time = convert_time_stamp(time_stamp);
+					plvdi->item.pszText = strcat(rtn_time, " (TimeDateStamp)");
+				}
+					break;
+				case 3:
+					// PointerToSymbolTable
+					plvdi->item.pszText = "Pointer To SymbolTable";
+					break;
+				case 4:
+					// NumberOfSymbols
+					plvdi->item.pszText = "Number Of Symbols";
+					break;
+				case 5:
+					// SizeOfOptionalHeader
+					plvdi->item.pszText = "Size Of Optional Header";
+					break;
+				case 6:
+					// Characteristics
+					plvdi->item.pszText = "Characteristics";
+					break;
+				}
+			}
+		}
+		else if (strcmp(g_last_click, "IMAGE_OPTIONAL_HEADER") == 0) {
+			char addr[30];
+			char data[30];
+			char desc[100];
+			switch (row) {
+			case 0:
+				// WORD Magic
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 22 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 25], g_content[dos_header.e_lfanew + 24]);
+				wsprintf(desc, "Magic");
+				break;
+			case 1:
+				// BYTE MajorLinkerVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 24 + 2);
+				wsprintf(data, "%02x", g_content[dos_header.e_lfanew + 26]);
+				wsprintf(desc, "Major Linker Version");
+				break;
+			case 2:
+				// BYTE MinorLinkerVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 26 + 1);
+				wsprintf(data, "%02x", g_content[dos_header.e_lfanew + 27]);
+				wsprintf(desc, "Minor Linker Version");
+				break;
+			case 3:
+				// DWORD SizeOfCode
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 27 + 1);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 28 + 3], g_content[dos_header.e_lfanew + 28 + 2], g_content[dos_header.e_lfanew + 28 + 1], g_content[dos_header.e_lfanew + 28]);
+				wsprintf(desc, "Size Of Code");
+				break;
+			case 4:
+				// DWORD SizeOfInitializedData
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 28 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 32 + 3], g_content[dos_header.e_lfanew + 32 + 2], g_content[dos_header.e_lfanew + 32 + 1], g_content[dos_header.e_lfanew + 32]);
+				wsprintf(desc, "Size Of Initialized Data");
+				break;
+			case 5:
+				// DWORD SizeOfUninitializedData
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 32 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 36 + 3], g_content[dos_header.e_lfanew + 36 + 2], g_content[dos_header.e_lfanew + 36 + 1], g_content[dos_header.e_lfanew + 36]);
+				wsprintf(desc, "Size Of Uninitialized Data");
+				break;
+			case 6:
+				// DWORD AddressOfEntryPoint
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 36 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 40 + 3], g_content[dos_header.e_lfanew + 40 + 2], g_content[dos_header.e_lfanew + 40 + 1], g_content[dos_header.e_lfanew + 40]);
+				wsprintf(desc, "Address Of Entry Point");
+				break;
+			case 7:
+				// DWORD BaseOfCode
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 40 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 44 + 3], g_content[dos_header.e_lfanew + 44 + 2], g_content[dos_header.e_lfanew + 44 + 1], g_content[dos_header.e_lfanew + 44]);
+				wsprintf(desc, "Base Of Code");
+				break;
+			case 8:
+				// DWORD BaseOfData
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 44 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 48 + 3], g_content[dos_header.e_lfanew + 48 + 2], g_content[dos_header.e_lfanew + 48 + 1], g_content[dos_header.e_lfanew + 48]);
+				wsprintf(desc, "Base Of Data");
+				break;
+			case 9:
+				// DWORD ImageBase
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 48 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 52 + 3], g_content[dos_header.e_lfanew + 52 + 2], g_content[dos_header.e_lfanew + 52 + 1], g_content[dos_header.e_lfanew + 52]);
+				wsprintf(desc, "Image Base");
+				break;
+			case 10:
+				// DWORD SectionAlignment
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 52 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 56 + 3], g_content[dos_header.e_lfanew + 56 + 2], g_content[dos_header.e_lfanew + 56 + 1], g_content[dos_header.e_lfanew + 56]);
+				wsprintf(desc, "Section Alignment");
+				break;
+			case 11:
+				// DWORD FileAlignment
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 56 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 60 + 3], g_content[dos_header.e_lfanew + 60 + 2], g_content[dos_header.e_lfanew + 60 + 1], g_content[dos_header.e_lfanew + 60]);
+				wsprintf(desc, "File Alignment");
+				break;
+			case 12:
+				// WORD MajorOperatingSystemVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 60 + 4);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 64 + 1], g_content[dos_header.e_lfanew + 64]);
+				wsprintf(desc, "Major Operating System Version");
+				break;
+			case 13:
+				// WORD MinorOperatingSystemVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 64 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 66 + 1], g_content[dos_header.e_lfanew + 66]);
+				wsprintf(desc, "Minor Operating System Version");
+				break;
+			case 14:
+				// WORD MajorImageVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 66 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 68 + 1], g_content[dos_header.e_lfanew + 68]);
+				wsprintf(desc, "Major Image Version");
+				break;
+			case 15:
+				// WORD MinorImageVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 68 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 70 + 1], g_content[dos_header.e_lfanew + 70]);
+				wsprintf(desc, "Minor Image Version");
+				break;
+			case 16:
+				// WORD MajorSubsystemVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 70 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 72 + 1], g_content[dos_header.e_lfanew + 72]);
+				wsprintf(desc, "Major Subsystem Version");
+				break;
+			case 17:
+				// WORD MinorSubsystemVersion
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 72 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 74 + 1], g_content[dos_header.e_lfanew + 74]);
+				wsprintf(desc, "Minor Subsystem Version");
+				break;
+			case 18:
+				// DWORD Win32VersionValue
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 74 + 2);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 76 + 3], g_content[dos_header.e_lfanew + 76 + 2], g_content[dos_header.e_lfanew + 76 + 1], g_content[dos_header.e_lfanew + 76]);
+				wsprintf(desc, "Win32 Version Value");
+				break;
+			case 19:
+				// DWORD SizeOfImage
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 76 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 80 + 3], g_content[dos_header.e_lfanew + 80 + 2], g_content[dos_header.e_lfanew + 80 + 1], g_content[dos_header.e_lfanew + 80]);
+				wsprintf(desc, "Size Of Image");
+				break;
+			case 20:
+				// DWORD SizeOfHeaders
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 80 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 84 + 3], g_content[dos_header.e_lfanew + 84 + 2], g_content[dos_header.e_lfanew + 84 + 1], g_content[dos_header.e_lfanew + 84]);
+				wsprintf(desc, "Size Of Headers");
+				break;
+			case 21:
+				// DWORD CheckSum
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 84 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 88 + 3], g_content[dos_header.e_lfanew + 88 + 2], g_content[dos_header.e_lfanew + 88 + 1], g_content[dos_header.e_lfanew + 88]);
+				wsprintf(desc, "Check Sum");
+				break;
+			case 22:
+				// WORD Subsystem
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 88 + 4);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 92 + 1], g_content[dos_header.e_lfanew + 92]);
+				wsprintf(desc, "Subsystem");
+				break;
+			case 23:
+				// WORD DllCharacteristics
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 92 + 2);
+				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 94 + 1], g_content[dos_header.e_lfanew + 94]);
+				wsprintf(desc, "Dll Characteristics");
+				break;
+			case 24:
+				// DWORD SizeOfStackReserve
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 94 + 2);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 96 + 3], g_content[dos_header.e_lfanew + 96 + 2], g_content[dos_header.e_lfanew + 96 + 1], g_content[dos_header.e_lfanew + 96]);
+				wsprintf(desc, "Size Of Stack Reserve");
+				break;
+			case 25:
+				// DWORD SizeOfStackCommit
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 96 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 100 + 3], g_content[dos_header.e_lfanew + 100 + 2], g_content[dos_header.e_lfanew + 100 + 1], g_content[dos_header.e_lfanew + 100]);
+				wsprintf(desc, "Size Of Stack Commit");
+				break;
+			case 26:
+				// DWORD SizeOfHeapReserve
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 100 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 104 + 3], g_content[dos_header.e_lfanew + 104 + 2], g_content[dos_header.e_lfanew + 104 + 1], g_content[dos_header.e_lfanew + 104]);
+				wsprintf(desc, "Size Of Heap Reserve");
+				break;
+			case 27:
+				// DWORD SizeOfHeapCommit
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 104 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 108 + 3], g_content[dos_header.e_lfanew + 108 + 2], g_content[dos_header.e_lfanew + 108 + 1], g_content[dos_header.e_lfanew + 108]);
+				wsprintf(desc, "Size Of Heap Commit");
+				break;
+			case 28:
+				// DWORD LoaderFlags
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 108 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 112 + 3], g_content[dos_header.e_lfanew + 112 + 2], g_content[dos_header.e_lfanew + 112 + 1], g_content[dos_header.e_lfanew + 112]);
+				wsprintf(desc, "Loader Flags");
+				break;
+			case 29:
+				// DWORD NumberOfRvaAndSizes
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 112 + 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 116 + 3], g_content[dos_header.e_lfanew + 116 + 2], g_content[dos_header.e_lfanew + 116 + 1], g_content[dos_header.e_lfanew + 116]);
+				wsprintf(desc, "Number Of Rva And Sizes");
+				break;
+			}
+			// IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES]
+			if (row >= 30 && row < 30 + 16*2) {
+				wsprintf(addr, "%08x", dos_header.e_lfanew + 120 + (row - 30) * 4);
+				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 120 + (row - 30) * 4 + 3], g_content[dos_header.e_lfanew + 120 + (row - 30) * 4 + 2], g_content[dos_header.e_lfanew + 120 + (row - 30) * 4 + 1], g_content[dos_header.e_lfanew + 120 + (row - 30) * 4]);
+				if (row % 2 == 0) {
+					wsprintf(desc, "IMAGE_DATA_DIRECTORY[%d], Virtual Address", (row - 30) / 2 );
+				}
+				else {
+					wsprintf(desc, "IMAGE_DATA_DIRECTORY[%d], Size", (row - 30) / 2);
+				}
+			}
+			if (col == 0) {
+				plvdi->item.pszText = strupr(addr);
+			}
+			else if (col == 1) {
+				plvdi->item.pszText = strupr(data);
+			}
+			else if (col == 2) {
+				plvdi->item.pszText = desc;
+			}
 		}
 	}
 }
