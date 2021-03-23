@@ -597,37 +597,37 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				switch (row) {
 					case 0:
 						// Machine
-						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 4 + 1], g_content[dos_header.e_lfanew + 4]);
+						wsprintf(data, "%04x", nt_headers.FileHeader.Machine);
 						plvdi->item.pszText = strupr(data);
 						break;
 					case 1:
 						// NumberOfSections
-						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 6 + 1], g_content[dos_header.e_lfanew + 6]);
+						wsprintf(data, "%04x", nt_headers.FileHeader.NumberOfSections);
 						plvdi->item.pszText = strupr(data);
 						break;
 					case 2:
 						// TimeDateStamp
-						wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 8 + 3], g_content[dos_header.e_lfanew + 8 + 2], g_content[dos_header.e_lfanew + 8 + 1], g_content[dos_header.e_lfanew + 8]);
+						wsprintf(data, "%08x", nt_headers.FileHeader.TimeDateStamp);
 						plvdi->item.pszText = strupr(data);
 						break;
 					case 3:
 						// PointerToSymbolTable
-						wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 12 + 3], g_content[dos_header.e_lfanew + 12 + 2], g_content[dos_header.e_lfanew + 12 + 1], g_content[dos_header.e_lfanew + 12]);
+						wsprintf(data, "%08x", nt_headers.FileHeader.PointerToSymbolTable);
 						plvdi->item.pszText = strupr(data);
 						break;
 					case 4:
 						// NumberOfSymbols
-						wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 16 + 3], g_content[dos_header.e_lfanew + 16 + 2], g_content[dos_header.e_lfanew + 16 + 1], g_content[dos_header.e_lfanew + 16]);
+						wsprintf(data, "%08x", nt_headers.FileHeader.NumberOfSymbols);
 						plvdi->item.pszText = strupr(data);
 						break;
 					case 5:
 						// SizeOfOptionalHeader
-						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 20 + 1], g_content[dos_header.e_lfanew + 20]);
+						wsprintf(data, "%04x", nt_headers.FileHeader.SizeOfOptionalHeader);
 						plvdi->item.pszText = strupr(data);
 						break;
 					case 6:
 						// Characteristics
-						wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 22 + 1], g_content[dos_header.e_lfanew + 22]);
+						wsprintf(data, "%04x", nt_headers.FileHeader.Characteristics);
 						plvdi->item.pszText = strupr(data);
 						break;
 				}
@@ -685,192 +685,193 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			case 0:
 				// WORD Magic
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 22 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 25], g_content[dos_header.e_lfanew + 24]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.Magic);
 				wsprintf(desc, "Magic");
 				break;
 			case 1:
 				// BYTE MajorLinkerVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 24 + 2);
-				wsprintf(data, "%02x", g_content[dos_header.e_lfanew + 26]);
+				wsprintf(data, "%02x", nt_headers.OptionalHeader.MajorLinkerVersion);
 				wsprintf(desc, "Major Linker Version");
 				break;
 			case 2:
 				// BYTE MinorLinkerVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 26 + 1);
-				wsprintf(data, "%02x", g_content[dos_header.e_lfanew + 27]);
+				wsprintf(data, "%02x", nt_headers.OptionalHeader.MinorLinkerVersion);
 				wsprintf(desc, "Minor Linker Version");
 				break;
 			case 3:
 				// DWORD SizeOfCode
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 27 + 1);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 28 + 3], g_content[dos_header.e_lfanew + 28 + 2], g_content[dos_header.e_lfanew + 28 + 1], g_content[dos_header.e_lfanew + 28]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfCode);
 				wsprintf(desc, "Size Of Code");
 				break;
 			case 4:
 				// DWORD SizeOfInitializedData
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 28 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 32 + 3], g_content[dos_header.e_lfanew + 32 + 2], g_content[dos_header.e_lfanew + 32 + 1], g_content[dos_header.e_lfanew + 32]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfInitializedData);
 				wsprintf(desc, "Size Of Initialized Data");
 				break;
 			case 5:
 				// DWORD SizeOfUninitializedData
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 32 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 36 + 3], g_content[dos_header.e_lfanew + 36 + 2], g_content[dos_header.e_lfanew + 36 + 1], g_content[dos_header.e_lfanew + 36]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfUninitializedData);
 				wsprintf(desc, "Size Of Uninitialized Data");
 				break;
 			case 6:
 				// DWORD AddressOfEntryPoint
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 36 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 40 + 3], g_content[dos_header.e_lfanew + 40 + 2], g_content[dos_header.e_lfanew + 40 + 1], g_content[dos_header.e_lfanew + 40]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.AddressOfEntryPoint);
 				wsprintf(desc, "Address Of Entry Point");
 				break;
 			case 7:
 				// DWORD BaseOfCode
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 40 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 44 + 3], g_content[dos_header.e_lfanew + 44 + 2], g_content[dos_header.e_lfanew + 44 + 1], g_content[dos_header.e_lfanew + 44]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.BaseOfCode);
 				wsprintf(desc, "Base Of Code");
 				break;
 			case 8:
 				// DWORD BaseOfData
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 44 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 48 + 3], g_content[dos_header.e_lfanew + 48 + 2], g_content[dos_header.e_lfanew + 48 + 1], g_content[dos_header.e_lfanew + 48]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.BaseOfData);
 				wsprintf(desc, "Base Of Data");
 				break;
 			case 9:
 				// DWORD ImageBase
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 48 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 52 + 3], g_content[dos_header.e_lfanew + 52 + 2], g_content[dos_header.e_lfanew + 52 + 1], g_content[dos_header.e_lfanew + 52]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.ImageBase);
 				wsprintf(desc, "Image Base");
 				break;
 			case 10:
 				// DWORD SectionAlignment
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 52 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 56 + 3], g_content[dos_header.e_lfanew + 56 + 2], g_content[dos_header.e_lfanew + 56 + 1], g_content[dos_header.e_lfanew + 56]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SectionAlignment);
 				wsprintf(desc, "Section Alignment");
 				break;
 			case 11:
 				// DWORD FileAlignment
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 56 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 60 + 3], g_content[dos_header.e_lfanew + 60 + 2], g_content[dos_header.e_lfanew + 60 + 1], g_content[dos_header.e_lfanew + 60]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.FileAlignment);
 				wsprintf(desc, "File Alignment");
 				break;
 			case 12:
 				// WORD MajorOperatingSystemVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 60 + 4);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 64 + 1], g_content[dos_header.e_lfanew + 64]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.MajorOperatingSystemVersion);
 				wsprintf(desc, "Major Operating System Version");
 				break;
 			case 13:
 				// WORD MinorOperatingSystemVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 64 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 66 + 1], g_content[dos_header.e_lfanew + 66]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.MinorOperatingSystemVersion);
 				wsprintf(desc, "Minor Operating System Version");
 				break;
 			case 14:
 				// WORD MajorImageVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 66 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 68 + 1], g_content[dos_header.e_lfanew + 68]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.MajorImageVersion);
 				wsprintf(desc, "Major Image Version");
 				break;
 			case 15:
 				// WORD MinorImageVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 68 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 70 + 1], g_content[dos_header.e_lfanew + 70]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.MinorImageVersion);
 				wsprintf(desc, "Minor Image Version");
 				break;
 			case 16:
 				// WORD MajorSubsystemVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 70 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 72 + 1], g_content[dos_header.e_lfanew + 72]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.MajorSubsystemVersion);
 				wsprintf(desc, "Major Subsystem Version");
 				break;
 			case 17:
 				// WORD MinorSubsystemVersion
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 72 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 74 + 1], g_content[dos_header.e_lfanew + 74]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.MinorSubsystemVersion);
 				wsprintf(desc, "Minor Subsystem Version");
 				break;
 			case 18:
 				// DWORD Win32VersionValue
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 74 + 2);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 76 + 3], g_content[dos_header.e_lfanew + 76 + 2], g_content[dos_header.e_lfanew + 76 + 1], g_content[dos_header.e_lfanew + 76]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.Win32VersionValue);
 				wsprintf(desc, "Win32 Version Value");
 				break;
 			case 19:
 				// DWORD SizeOfImage
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 76 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 80 + 3], g_content[dos_header.e_lfanew + 80 + 2], g_content[dos_header.e_lfanew + 80 + 1], g_content[dos_header.e_lfanew + 80]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfImage);
 				wsprintf(desc, "Size Of Image");
 				break;
 			case 20:
 				// DWORD SizeOfHeaders
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 80 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 84 + 3], g_content[dos_header.e_lfanew + 84 + 2], g_content[dos_header.e_lfanew + 84 + 1], g_content[dos_header.e_lfanew + 84]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfHeaders);
 				wsprintf(desc, "Size Of Headers");
 				break;
 			case 21:
 				// DWORD CheckSum
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 84 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 88 + 3], g_content[dos_header.e_lfanew + 88 + 2], g_content[dos_header.e_lfanew + 88 + 1], g_content[dos_header.e_lfanew + 88]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.CheckSum);
 				wsprintf(desc, "Check Sum");
 				break;
 			case 22:
 				// WORD Subsystem
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 88 + 4);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 92 + 1], g_content[dos_header.e_lfanew + 92]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.Subsystem);
 				wsprintf(desc, "Subsystem");
 				break;
 			case 23:
 				// WORD DllCharacteristics
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 92 + 2);
-				wsprintf(data, "%02x%02x", g_content[dos_header.e_lfanew + 94 + 1], g_content[dos_header.e_lfanew + 94]);
+				wsprintf(data, "%04x", nt_headers.OptionalHeader.DllCharacteristics);
 				wsprintf(desc, "Dll Characteristics");
 				break;
 			case 24:
 				// DWORD SizeOfStackReserve
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 94 + 2);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 96 + 3], g_content[dos_header.e_lfanew + 96 + 2], g_content[dos_header.e_lfanew + 96 + 1], g_content[dos_header.e_lfanew + 96]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfStackReserve);
 				wsprintf(desc, "Size Of Stack Reserve");
 				break;
 			case 25:
 				// DWORD SizeOfStackCommit
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 96 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 100 + 3], g_content[dos_header.e_lfanew + 100 + 2], g_content[dos_header.e_lfanew + 100 + 1], g_content[dos_header.e_lfanew + 100]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfStackCommit);
 				wsprintf(desc, "Size Of Stack Commit");
 				break;
 			case 26:
 				// DWORD SizeOfHeapReserve
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 100 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 104 + 3], g_content[dos_header.e_lfanew + 104 + 2], g_content[dos_header.e_lfanew + 104 + 1], g_content[dos_header.e_lfanew + 104]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfHeapReserve);
 				wsprintf(desc, "Size Of Heap Reserve");
 				break;
 			case 27:
 				// DWORD SizeOfHeapCommit
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 104 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 108 + 3], g_content[dos_header.e_lfanew + 108 + 2], g_content[dos_header.e_lfanew + 108 + 1], g_content[dos_header.e_lfanew + 108]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.SizeOfHeapCommit);
 				wsprintf(desc, "Size Of Heap Commit");
 				break;
 			case 28:
 				// DWORD LoaderFlags
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 108 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 112 + 3], g_content[dos_header.e_lfanew + 112 + 2], g_content[dos_header.e_lfanew + 112 + 1], g_content[dos_header.e_lfanew + 112]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.LoaderFlags);
 				wsprintf(desc, "Loader Flags");
 				break;
 			case 29:
 				// DWORD NumberOfRvaAndSizes
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 112 + 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 116 + 3], g_content[dos_header.e_lfanew + 116 + 2], g_content[dos_header.e_lfanew + 116 + 1], g_content[dos_header.e_lfanew + 116]);
+				wsprintf(data, "%08x", nt_headers.OptionalHeader.NumberOfRvaAndSizes);
 				wsprintf(desc, "Number Of Rva And Sizes");
 				break;
 			}
 			// IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES]
 			if (row >= 30 && row < 30 + 16*2) {
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 120 + (row - 30) * 4);
-				wsprintf(data, "%02x%02x%02x%02x", g_content[dos_header.e_lfanew + 120 + (row - 30) * 4 + 3], g_content[dos_header.e_lfanew + 120 + (row - 30) * 4 + 2], g_content[dos_header.e_lfanew + 120 + (row - 30) * 4 + 1], g_content[dos_header.e_lfanew + 120 + (row - 30) * 4]);
 				if (row % 2 == 0) {
+					wsprintf(data, "%08x", nt_headers.OptionalHeader.DataDirectory[(row - 30) / 2].VirtualAddress);
 					wsprintf(desc, "IMAGE_DATA_DIRECTORY[%d], Virtual Address", (row - 30) / 2 );
 				}
 				else {
+					wsprintf(data, "%08x", nt_headers.OptionalHeader.DataDirectory[(row - 30) / 2].Size);
 					wsprintf(desc, "IMAGE_DATA_DIRECTORY[%d], Size", (row - 30) / 2);
 				}
 			}
