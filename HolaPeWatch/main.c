@@ -33,6 +33,13 @@ col_style g_col_style2[4] = {
 	{ 0, "END", 0 }
 };
 
+col_style g_col_style3[4] = {
+	{ ADDRESS_WIDTH, "address", LVCFMT_CENTER },
+	{ DATA_WIDTH - 200, "data", LVCFMT_CENTER },
+	{ ASCII_WIDTH + 200, "description", LVCFMT_LEFT },
+	{ 0, "END", 0 }
+};
+
 // global variable
 WNDCLASSEX MainWnd;
 HWND hMainWnd;
@@ -46,6 +53,7 @@ char g_last_click[MAX_PATH] = "";    // last clicked item in tree view
 unsigned char * g_content;           // the whole content of the seleced file
 long g_sz;                           // size of the selected file
 char *g_goto_buf = NULL;
+int g_sec_header_index = -1;
 
 
 // function declaration
@@ -399,6 +407,17 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			else if (strcmp(buf, "IMAGE_OPTIONAL_HEADER") == 0) {
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 46 + 16, NULL);
+			}
+			else if (strstr(buf, "IMAGE_SECTION_HEADER") != NULL) {
+				char * sec_name = strchr(buf, ' ') + 1;
+				for (int i = 0; i < number_of_sections; i++) {
+					if (strcmp(section_header[i].Name, sec_name) == 0) {
+						g_sec_header_index = i;
+						break;
+					}
+				}
+				add_cols(g_col_style3);
+				ListView_SetItemCountEx(hListView, 10, NULL);
 			}
 		}
 	} /*if (NM_CLICK == lpnmh->code) end*/
@@ -883,6 +902,78 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 			else if (col == 2) {
 				plvdi->item.pszText = desc;
+			}
+		}
+		else if (strstr(g_last_click, "IMAGE_SECTION_HEADER") != NULL) {
+			if (g_sec_header_index != -1) {
+				char addr[30];
+				char data[50];
+				char desc[100];
+				int sec_offset = g_sec_header_index * sizeof(IMAGE_SECTION_HEADER);
+				IMAGE_SECTION_HEADER * sec_header = &section_header[g_sec_header_index];
+				switch (row) {
+				case 0:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + sec_offset);
+					wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x", sec_header->Name[0], sec_header->Name[1], 
+						sec_header->Name[2], sec_header->Name[3], sec_header->Name[4], 
+						sec_header->Name[5], sec_header->Name[6], sec_header->Name[7]);
+					wsprintf(desc, "Name");
+					break;
+				case 1:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 8 + sec_offset);
+					wsprintf(data, "%08x", sec_header->Misc);
+					wsprintf(desc, "Union {Physical Address, Virtual Size} Misc");
+					break;
+				case 2:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 12 + sec_offset);
+					wsprintf(data, "%08x", sec_header->VirtualAddress);
+					wsprintf(desc, "Virtual Address");
+					break;
+				case 3:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 16 + sec_offset);
+					wsprintf(data, "%08x", sec_header->SizeOfRawData);
+					wsprintf(desc, "Size Of Raw Data");
+					break;
+				case 4:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 20 + sec_offset);
+					wsprintf(data, "%08x", sec_header->PointerToRawData);
+					wsprintf(desc, "Pointer To Raw Data");
+					break;
+				case 5:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 24 + sec_offset);
+					wsprintf(data, "%08x", sec_header->PointerToRelocations);
+					wsprintf(desc, "Pointer To Relocations");
+					break;
+				case 6:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 28 + sec_offset);
+					wsprintf(data, "%08x", sec_header->PointerToLinenumbers);
+					wsprintf(desc, "Pointer To Line Numbers");
+					break;
+				case 7:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 32 + sec_offset);
+					wsprintf(data, "%04x", sec_header->NumberOfRelocations);
+					wsprintf(desc, "Number Of Relocations");
+					break;
+				case 8:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 34 + sec_offset);
+					wsprintf(data, "%04x", sec_header->NumberOfLinenumbers);
+					wsprintf(desc, "Number Of Line Numbers");
+					break;
+				case 9:
+					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + 36 + sec_offset);
+					wsprintf(data, "%08x", sec_header->Characteristics);
+					wsprintf(desc, "Characteristics");
+					break;
+				}
+				if (col == 0) {
+					plvdi->item.pszText = strupr(addr);
+				}
+				else if (col == 1) {
+					plvdi->item.pszText = strupr(data);
+				}
+				else if (col == 2) {
+					plvdi->item.pszText = desc;
+				}
 			}
 		}
 	}
