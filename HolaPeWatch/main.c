@@ -419,6 +419,17 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				add_cols(g_col_style3);
 				ListView_SetItemCountEx(hListView, 10, NULL);
 			}
+			else if (strstr(buf, "SECTION") != NULL) {
+				char * sec_name = strchr(buf, ' ') + 1;
+				for (int i = 0; i < number_of_sections; i++) {
+					if (strcmp(section_header[i].Name, sec_name) == 0) {
+						g_sec_header_index = i;
+						break;
+					}
+				}
+				add_cols(g_col_style1);
+				ListView_SetItemCountEx(hListView, section_header[g_sec_header_index].SizeOfRawData / 16 + (section_header[g_sec_header_index].SizeOfRawData  % 16 == 0 ? 0 : 1), NULL);
+			}
 		}
 	} /*if (NM_CLICK == lpnmh->code) end*/
 	else if (LVN_GETDISPINFO == lpnmh->code) {
@@ -974,6 +985,12 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				else if (col == 2) {
 					plvdi->item.pszText = desc;
 				}
+			}
+		}
+		else if (strstr(g_last_click, "SECTION") != NULL) {
+			if (g_sec_header_index != -1) {
+				IMAGE_SECTION_HEADER * sec_header = &section_header[g_sec_header_index];
+				plvdi->item.pszText = typical_three_col_print(row, col, sec_header->PointerToRawData, sec_header->PointerToRawData + sec_header->SizeOfRawData);
 			}
 		}
 	}

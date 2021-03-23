@@ -263,5 +263,17 @@ struct tree_node * get_tree_view() {
 		tmp->sub_node = NULL;
 	}
 	tmp->sibling = NULL;
+	
+	// constructing section
+	for (int i = 0; i < number_of_sections; i++) {
+		char * prefix = (char *)malloc(MAX_PATH);
+		strcpy(prefix, "SECTION ");
+		tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+		tmp = tmp->sibling;
+		tmp->name = strcat(prefix, (char*)section_header[i].Name);
+		tmp->sub_node = NULL;
+	}
+	tmp->sibling = NULL;
+
 	return root;
 }
