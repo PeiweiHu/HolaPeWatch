@@ -430,6 +430,10 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				add_cols(g_col_style1);
 				ListView_SetItemCountEx(hListView, section_header[g_sec_header_index].SizeOfRawData / 16 + (section_header[g_sec_header_index].SizeOfRawData  % 16 == 0 ? 0 : 1), NULL);
 			}
+			else if (strcmp(buf, "IMAGE_EXPORT_DIRECTORY") == 0) {
+				add_cols(g_col_style2);
+				ListView_SetItemCountEx(hListView, 11, NULL);
+			}
 		}
 	} /*if (NM_CLICK == lpnmh->code) end*/
 	else if (LVN_GETDISPINFO == lpnmh->code) {
@@ -992,6 +996,9 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				IMAGE_SECTION_HEADER * sec_header = &section_header[g_sec_header_index];
 				plvdi->item.pszText = typical_three_col_print(row, col, sec_header->PointerToRawData, sec_header->PointerToRawData + sec_header->SizeOfRawData);
 			}
+		}
+		else if (strcmp(g_last_click, "IMAGE_EXPORT_DIRECTORY") == 0) {
+
 		}
 	}
 }

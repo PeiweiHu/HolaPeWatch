@@ -33,6 +33,7 @@ extern IMAGE_EXPORT_DIRECTORY export_directory;
 // for error handle
 extern struct error_struct error_head;
 
+extern HWND hMainWnd;
 
 // func decl
 DWORD rva_to_raw(DWORD rva);

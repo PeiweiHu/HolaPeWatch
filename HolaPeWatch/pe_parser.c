@@ -218,6 +218,35 @@ struct tree_node {
 };
 */
 
+
+void insert_sub_node(struct tree_node * root, char * target, char * child) {
+	if (strcmp(root->name, target) == 0) {
+		if (root->sub_node != NULL) {
+			struct tree_node * tmp = root->sub_node;
+			while (tmp->sibling != NULL) {
+				tmp = tmp->sibling;
+			}
+			tmp->sibling = (struct tree_node *)malloc(sizeof(struct tree_node));
+			tmp->sibling->name = child;
+			tmp->sibling->sibling = NULL;
+			tmp->sibling->sub_node = NULL;
+		}
+		else {
+			root->sub_node = (struct tree_node *)malloc(sizeof(struct tree_node));
+			root->sub_node->name = child;
+			root->sub_node->sibling = NULL;
+			root->sub_node->sub_node = NULL;
+		}
+	}
+
+	if (root->sibling != NULL) {
+		insert_sub_node(root->sibling, target, child);
+	}
+	if (root->sub_node != NULL) {
+		insert_sub_node(root->sub_node, target, child);
+	}
+}
+
 struct tree_node * get_tree_view() {
 	struct tree_node *root = (struct tree_node *)malloc(sizeof(struct tree_node));
 	root->name = "ROOT";
@@ -275,5 +304,20 @@ struct tree_node * get_tree_view() {
 	}
 	tmp->sibling = NULL;
 
+	// insert IMAGE_EXPORT_DIRECTORY
+	if (optional_header.DataDirectory[0].Size != 0) {
+		int sec_index = which_section(optional_header.DataDirectory[0].VirtualAddress);
+		char * sec_name = (char *)malloc(MAX_PATH);
+	    strcpy(sec_name, "SECTION ");
+		strcat(sec_name, section_header[sec_index].Name);
+		insert_sub_node(root, sec_name, "IMAGE_EXPORT_DIRECTORY");
+		free(sec_name);
+		sec_name = NULL;
+	}
 	return root;
 }
+
+
+// TODO: process duplicated section name
+
+
