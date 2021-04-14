@@ -21,6 +21,9 @@
     <ClInclude Include="pe_parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">
@@ -34,5 +37,13 @@
     <ClCompile Include="pe_parser.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="HPW.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="HPW.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

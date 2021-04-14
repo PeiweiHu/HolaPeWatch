@@ -1,3 +1,4 @@
+#include "common.h"
 #include "pe_parser.h"
 
 IMAGE_DOS_HEADER dos_header;

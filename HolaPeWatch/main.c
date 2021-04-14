@@ -1,3 +1,4 @@
+#include "common.h"
 #include "pe_parser.h"
 
 #define MAINWND_WIDTH 950
@@ -61,6 +62,7 @@ long g_goto_base = -1;
 // function declaration
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 
 // function defination
@@ -89,7 +91,7 @@ void create_window(HINSTANCE hInstance, int nCmdShow) {
 	HICON hIconSm = (HICON)CopyImage(hIcon, IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_COPYFROMRESOURCE);
 	// create main window
 	hMainWnd = CreateWindowEx(
-		WS_EX_CLIENTEDGE ,
+		WS_EX_CLIENTEDGE,
 		"mainwnd",
 		"HolaPeWatch",
 		WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX,
@@ -358,7 +360,7 @@ void do_create(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	// create right list view
 	hListView = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, "",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA,
-	    RIGHT_X_START, 0, RIGHT_WIDTH, RIGHT_HEIGHT, hwnd, (HMENU)IDC_LISTVIEW, GetModuleHandle(NULL), NULL);
+		RIGHT_X_START, 0, RIGHT_WIDTH, RIGHT_HEIGHT, hwnd, (HMENU)IDC_LISTVIEW, GetModuleHandle(NULL), NULL);
 	ListView_SetExtendedListViewStyle(hListView, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 	// set font, copy from [http://winprog dot org/tutorial/zh/fonts_cn dot html]
 	// maybe need to be released in destroy
@@ -378,7 +380,6 @@ void do_create(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		0, 0, LEFT_WIDTH, LEFT_HEIGHT, hwnd, (HMENU)IDC_TREEVIEW, GetModuleHandle(NULL), NULL);
 
 }
-
 
 void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	LPNMHDR lpnmh = (LPNMHDR)lParam;
@@ -474,7 +475,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				update_menu_goto(section_header[g_sec_header_index].PointerToRawData);
 
 				add_cols(g_col_style1);
-				ListView_SetItemCountEx(hListView, section_header[g_sec_header_index].SizeOfRawData / 16 + (section_header[g_sec_header_index].SizeOfRawData  % 16 == 0 ? 0 : 1), NULL);
+				ListView_SetItemCountEx(hListView, section_header[g_sec_header_index].SizeOfRawData / 16 + (section_header[g_sec_header_index].SizeOfRawData % 16 == 0 ? 0 : 1), NULL);
 			}
 			// currently not used
 			else if (strcmp(buf, "IMAGE_EXPORT_DIRECTORY") == 0) {
@@ -682,41 +683,41 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			else if (col == 1) {
 				char data[30];
 				switch (row) {
-					case 0:
-						// Machine
-						wsprintf(data, "%04x", nt_headers.FileHeader.Machine);
-						plvdi->item.pszText = strupr(data);
-						break;
-					case 1:
-						// NumberOfSections
-						wsprintf(data, "%04x", nt_headers.FileHeader.NumberOfSections);
-						plvdi->item.pszText = strupr(data);
-						break;
-					case 2:
-						// TimeDateStamp
-						wsprintf(data, "%08x", nt_headers.FileHeader.TimeDateStamp);
-						plvdi->item.pszText = strupr(data);
-						break;
-					case 3:
-						// PointerToSymbolTable
-						wsprintf(data, "%08x", nt_headers.FileHeader.PointerToSymbolTable);
-						plvdi->item.pszText = strupr(data);
-						break;
-					case 4:
-						// NumberOfSymbols
-						wsprintf(data, "%08x", nt_headers.FileHeader.NumberOfSymbols);
-						plvdi->item.pszText = strupr(data);
-						break;
-					case 5:
-						// SizeOfOptionalHeader
-						wsprintf(data, "%04x", nt_headers.FileHeader.SizeOfOptionalHeader);
-						plvdi->item.pszText = strupr(data);
-						break;
-					case 6:
-						// Characteristics
-						wsprintf(data, "%04x", nt_headers.FileHeader.Characteristics);
-						plvdi->item.pszText = strupr(data);
-						break;
+				case 0:
+					// Machine
+					wsprintf(data, "%04x", nt_headers.FileHeader.Machine);
+					plvdi->item.pszText = strupr(data);
+					break;
+				case 1:
+					// NumberOfSections
+					wsprintf(data, "%04x", nt_headers.FileHeader.NumberOfSections);
+					plvdi->item.pszText = strupr(data);
+					break;
+				case 2:
+					// TimeDateStamp
+					wsprintf(data, "%08x", nt_headers.FileHeader.TimeDateStamp);
+					plvdi->item.pszText = strupr(data);
+					break;
+				case 3:
+					// PointerToSymbolTable
+					wsprintf(data, "%08x", nt_headers.FileHeader.PointerToSymbolTable);
+					plvdi->item.pszText = strupr(data);
+					break;
+				case 4:
+					// NumberOfSymbols
+					wsprintf(data, "%08x", nt_headers.FileHeader.NumberOfSymbols);
+					plvdi->item.pszText = strupr(data);
+					break;
+				case 5:
+					// SizeOfOptionalHeader
+					wsprintf(data, "%04x", nt_headers.FileHeader.SizeOfOptionalHeader);
+					plvdi->item.pszText = strupr(data);
+					break;
+				case 6:
+					// Characteristics
+					wsprintf(data, "%04x", nt_headers.FileHeader.Characteristics);
+					plvdi->item.pszText = strupr(data);
+					break;
 				}
 			}
 			else if (col == 2) {
@@ -744,7 +745,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 					char * rtn_time = convert_time_stamp(time_stamp);
 					plvdi->item.pszText = strcat(rtn_time, " (TimeDateStamp)");
 				}
-					break;
+						break;
 				case 3:
 					// PointerToSymbolTable
 					plvdi->item.pszText = "Pointer To SymbolTable";
@@ -952,11 +953,11 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				break;
 			}
 			// IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES]
-			if (row >= 30 && row < 30 + 16*2) {
+			if (row >= 30 && row < 30 + 16 * 2) {
 				wsprintf(addr, "%08x", dos_header.e_lfanew + 120 + (row - 30) * 4);
 				if (row % 2 == 0) {
 					wsprintf(data, "%08x", nt_headers.OptionalHeader.DataDirectory[(row - 30) / 2].VirtualAddress);
-					wsprintf(desc, "IMAGE_DATA_DIRECTORY[%d], Virtual Address", (row - 30) / 2 );
+					wsprintf(desc, "IMAGE_DATA_DIRECTORY[%d], Virtual Address", (row - 30) / 2);
 				}
 				else {
 					wsprintf(data, "%08x", nt_headers.OptionalHeader.DataDirectory[(row - 30) / 2].Size);
@@ -984,8 +985,8 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				switch (row) {
 				case 0:
 					wsprintf(addr, "%08x", dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS) + sec_offset);
-					wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x", sec_header->Name[0], sec_header->Name[1], 
-						sec_header->Name[2], sec_header->Name[3], sec_header->Name[4], 
+					wsprintf(data, "%02x %02x %02x %02x %02x %02x %02x %02x", sec_header->Name[0], sec_header->Name[1],
+						sec_header->Name[2], sec_header->Name[3], sec_header->Name[4],
 						sec_header->Name[5], sec_header->Name[6], sec_header->Name[7]);
 					wsprintf(desc, "Name");
 					break;
@@ -1112,13 +1113,14 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	case ID_GOTO: {
 		int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_GOTO), hwnd, GotoDlgProc);
 	}
-				  break;
+					break;
 	case ID_FILE_CLOSE: {
 		PostQuitMessage(0);
 	}
-				  break;
+						break;
 	case ID_ABOUT: {
-		MessageBox(hMainWnd, "    A file viewer of pe format based on Win32. This is a free\r\n    software, all source code can be downloaded freely\r\n\r\n    report errors: jlu DOT hpw AT foxmail DOT com\r\n\r\n    author: www.hupeiwei.com", "About", MB_OK | MB_ICONINFORMATION);
+		DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_ABOUT), hwnd, AboutDlgProc);
+		//MessageBox(hMainWnd, "    A file viewer of pe format based on Win32. This is a free\r\n    software, all source code can be downloaded freely\r\n\r\n    report errors: jlu DOT hpw AT foxmail DOT com\r\n\r\n    author: www.hupeiwei.com", "About", MB_OK | MB_ICONINFORMATION);
 	}
 				   break;
 	} /*switch (LOWORD(wParam))*/
@@ -1148,7 +1150,31 @@ BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 			go();
 			EndDialog(hwnd, 1);
 		}
-			break;
+						 break;
+		}
+		break;
+	case WM_SYSCOMMAND:
+		if (SC_CLOSE == wParam) {
+			EndDialog(hwnd, 0);
+		}
+		// go to default so user can move dialog window
+		return FALSE;
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+	switch (Message)
+	{
+	case WM_INITDIALOG:
+		break;
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case ID_ABOUT_OK: EndDialog(hwnd, 0); break;
 		}
 		break;
 	case WM_SYSCOMMAND:
