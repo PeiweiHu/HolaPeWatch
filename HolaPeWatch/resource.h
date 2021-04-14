@@ -12,3 +12,5 @@
 #define IDD_GOTO 206
 #define IDC_GOTO_EDIT 207
 #define ID_GOTO_OK 208
+
+#define IDC_MYICON 300

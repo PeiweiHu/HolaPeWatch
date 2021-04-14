@@ -72,19 +72,21 @@ void register_window() {
 	MainWnd.cbClsExtra = 0;
 	MainWnd.cbWndExtra = 0;
 	MainWnd.hInstance = GetModuleHandle(NULL);
-	MainWnd.hIcon = NULL;
+	MainWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDC_MYICON));
 	MainWnd.hCursor = NULL;
 	MainWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	MainWnd.lpszMenuName = MAKEINTRESOURCE(IDM_MENU);
 	MainWnd.lpszClassName = "mainwnd";
-	MainWnd.hIconSm = NULL;
+	MainWnd.hIconSm = LoadIcon(NULL, MAKEINTRESOURCE(IDC_MYICON));
 	if (!RegisterClassEx(&MainWnd)) {
 		MessageBox(NULL, "MainWnd registration fails!", "Error", MB_ICONEXCLAMATION | MB_OK);
 		return;
 	}
 }
 
-void create_window(int nCmdShow) {
+void create_window(HINSTANCE hInstance, int nCmdShow) {
+	HICON hIcon = (HICON)LoadImageW(hInstance, MAKEINTRESOURCEW(IDC_MYICON), IMAGE_ICON, 0, 0, LR_SHARED | LR_DEFAULTSIZE);
+	HICON hIconSm = (HICON)CopyImage(hIcon, IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_COPYFROMRESOURCE);
 	// create main window
 	hMainWnd = CreateWindowEx(
 		WS_EX_CLIENTEDGE ,
@@ -104,13 +106,17 @@ void create_window(int nCmdShow) {
 		MessageBox(NULL, "Main Window Creation Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 		return;
 	}
+
 	ShowWindow(hMainWnd, nCmdShow);
 	UpdateWindow(hMainWnd);
+
+	SendMessage(hMainWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIconSm);
+	SendMessage(hMainWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	register_window();
-	create_window(nCmdShow);
+	create_window(hInstance, nCmdShow);
 
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{
@@ -1158,6 +1164,7 @@ BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 }
 
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+
 	switch (msg) {
 	case WM_CREATE:
 		do_create(hwnd, msg, wParam, lParam);
