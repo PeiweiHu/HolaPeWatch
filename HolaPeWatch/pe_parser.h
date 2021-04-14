@@ -40,7 +40,7 @@ DWORD rva_to_raw(DWORD rva);
 char * get_str(DWORD rva, FILE * pfile);
 int which_section(DWORD rva);
 char ** get_first_level();
-void assign_var(char * file_path);
+BOOL assign_var(char * file_path);
 unsigned char * all_content(char * path);
 long get_filesize(char * path);
 void add_error(char * reason, int level);

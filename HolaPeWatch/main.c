@@ -47,6 +47,7 @@ HWND hListView;
 HWND hTreeView;
 MSG msg;
 
+
 char g_filepath[MAX_PATH] = "";
 char g_filename[MAX_PATH] = "HolaPeWatch_waiting_for_file";
 char g_last_click[MAX_PATH] = "";    // last clicked item in tree view
@@ -54,11 +55,13 @@ unsigned char * g_content;           // the whole content of the seleced file
 long g_sz;                           // size of the selected file
 char *g_goto_buf = NULL;
 int g_sec_header_index = -1;
+long g_goto_base = -1;
 
 
 // function declaration
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+
 
 // function defination
 void register_window() {
@@ -161,9 +164,25 @@ char ascii_convert(unsigned char _ch) {
 	}
 }
 
+void update_menu_goto(long goto_base) {
+	if (g_goto_base < 0 && goto_base >= 0) {
+		EnableMenuItem(GetMenu(hMainWnd), ID_GOTO, MF_ENABLED);
+		DrawMenuBar(hMainWnd);
+	}
+	else if (g_goto_base >= 0 && goto_base < 0) {
+		EnableMenuItem(GetMenu(hMainWnd), ID_GOTO, MF_DISABLED);
+		DrawMenuBar(hMainWnd);
+	}
+	g_goto_base = goto_base;
+}
+
 // check g_goto_buf
 BOOL go() {
 	if (g_goto_buf == NULL) return FALSE;
+	if (g_goto_base < 0) {
+		MessageBox(hMainWnd, "    Don't support goto in current view", "Error", MB_OK | MB_ICONWARNING);
+		return FALSE;
+	}
 	// first check format
 	// remove 0x 0X
 	if (g_goto_buf[0] == '0' && (g_goto_buf[1] == 'x' || g_goto_buf[1] == 'X')) {
@@ -174,11 +193,11 @@ BOOL go() {
 	for (int i = 0; i < buf_len; i++) {
 		int ele = *(g_goto_buf + i);
 		if (ele < 0 || ele > 255) {
-			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+			MessageBox(hMainWnd, "    Invalid address", "Error", MB_OK | MB_ICONWARNING);
 			return FALSE;
 		}
 		if (!isxdigit(ele)) {
-			MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+			MessageBox(hMainWnd, "    Invalid address", "Error", MB_OK | MB_ICONWARNING);
 			return FALSE;
 		}
 	}
@@ -188,7 +207,7 @@ BOOL go() {
 
 	long addr;
 	sscanf(g_goto_buf, "%x", &addr);
-	addr = addr / 16;
+	addr = (addr - g_goto_base) / 16;
 
 	long last_row = g_sz / 16;
 	if (addr > last_row || addr < 0) {
@@ -329,6 +348,7 @@ char * convert_time_stamp(INT64 time_stamp) {
 }
 
 void do_create(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+
 	// create right list view
 	hListView = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, "",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA,
@@ -350,7 +370,9 @@ void do_create(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	hTreeView = CreateWindowEx(WS_EX_CLIENTEDGE, WC_TREEVIEW, "",
 		WS_VISIBLE | WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT,
 		0, 0, LEFT_WIDTH, LEFT_HEIGHT, hwnd, (HMENU)IDC_TREEVIEW, GetModuleHandle(NULL), NULL);
+
 }
+
 
 void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	LPNMHDR lpnmh = (LPNMHDR)lParam;
@@ -381,34 +403,50 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 			// response
 			if (strcmp(buf, g_filename) == 0) {
+				update_menu_goto(0);
+
 				add_cols(g_col_style1);
 				ListView_SetItemCountEx(hListView, g_sz / 16 + (g_sz % 16 == 0 ? 0 : 1), NULL);
 			}
 			else if (strcmp(buf, "IMAGE_DOS_HEADER") == 0) {
+				update_menu_goto(-1);
+
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 31, NULL);
 			}
 			else if (strcmp(buf, "DOS Stub") == 0) {
+				update_menu_goto(-1);
+
 				add_cols(g_col_style1);
 				ListView_SetItemCountEx(hListView, (dos_header.e_lfanew - 0x40) / 16 + ((dos_header.e_lfanew - 0x40) % 16 == 0 ? 0 : 1), NULL);
 			}
 			else if (strcmp(buf, "IMAGE_NT_HEADERS") == 0) {
+				update_menu_goto(-1);
+
 				add_cols(g_col_style1);
 				ListView_SetItemCountEx(hListView, sizeof(IMAGE_NT_HEADERS) / 16 + (sizeof(IMAGE_NT_HEADERS) % 16 == 0 ? 0 : 1), NULL);
 			}
 			else if (strcmp(buf, "Signature") == 0) {
+				update_menu_goto(-1);
+
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 1, NULL);
 			}
 			else if (strcmp(buf, "IMAGE_FILE_HEADER") == 0) {
+				update_menu_goto(-1);
+
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 7, NULL);
 			}
 			else if (strcmp(buf, "IMAGE_OPTIONAL_HEADER") == 0) {
+				update_menu_goto(-1);
+
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 46 + 16, NULL);
 			}
 			else if (strstr(buf, "IMAGE_SECTION_HEADER") != NULL) {
+				update_menu_goto(-1);
+
 				char * sec_name = strchr(buf, ' ') + 1;
 				for (int i = 0; i < number_of_sections; i++) {
 					if (strcmp(section_header[i].Name, sec_name) == 0) {
@@ -427,9 +465,12 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 						break;
 					}
 				}
+				update_menu_goto(section_header[g_sec_header_index].PointerToRawData);
+
 				add_cols(g_col_style1);
 				ListView_SetItemCountEx(hListView, section_header[g_sec_header_index].SizeOfRawData / 16 + (section_header[g_sec_header_index].SizeOfRawData  % 16 == 0 ? 0 : 1), NULL);
 			}
+			// currently not used
 			else if (strcmp(buf, "IMAGE_EXPORT_DIRECTORY") == 0) {
 				add_cols(g_col_style2);
 				ListView_SetItemCountEx(hListView, 11, NULL);
@@ -443,9 +484,11 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		int col = plvdi->item.iSubItem;
 		// when click file name (tree view root) - maybe a little bit messy, reconstruct later
 		if (strcmp(g_last_click, g_filename) == 0) {
+
 			plvdi->item.pszText = typical_three_col_print(row, col, 0, g_sz);
 		}
 		else if (strcmp(g_last_click, "IMAGE_DOS_HEADER") == 0) {
+
 			char addr[50];
 			char data[100];
 			//char desc[100];
@@ -563,12 +606,15 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 		else if (strcmp(g_last_click, "DOS Stub") == 0) {
+
 			plvdi->item.pszText = typical_three_col_print(row, col, 0x40, dos_header.e_lfanew);
 		}
 		else if (strcmp(g_last_click, "IMAGE_NT_HEADERS") == 0) {
+
 			plvdi->item.pszText = typical_three_col_print(row, col, dos_header.e_lfanew, dos_header.e_lfanew + sizeof(IMAGE_NT_HEADERS));
 		}
 		else if (strcmp(g_last_click, "Signature") == 0) {
+
 			if (row == 0) {
 				if (col == 0) {
 					char addr[30];
@@ -586,6 +632,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 		else if (strcmp(g_last_click, "IMAGE_FILE_HEADER") == 0) {
+
 			if (col == 0) {
 				char addr[30];
 				switch (row) {
@@ -712,6 +759,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 		else if (strcmp(g_last_click, "IMAGE_OPTIONAL_HEADER") == 0) {
+
 			char addr[30];
 			char data[30];
 			char desc[100];
@@ -920,6 +968,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 		else if (strstr(g_last_click, "IMAGE_SECTION_HEADER") != NULL) {
+
 			if (g_sec_header_index != -1) {
 				char addr[30];
 				char data[50];
@@ -997,6 +1046,7 @@ void do_notify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				plvdi->item.pszText = typical_three_col_print(row, col, sec_header->PointerToRawData, sec_header->PointerToRawData + sec_header->SizeOfRawData);
 			}
 		}
+		// currently not be used
 		else if (strcmp(g_last_click, "IMAGE_EXPORT_DIRECTORY") == 0) {
 
 		}
@@ -1022,14 +1072,31 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 			// save selected file to g_content
 			g_content = all_content(g_filepath);
+			if (g_content == NULL) {
+				TreeView_DeleteAllItems(hTreeView);
+				ListView_SetItemCountEx(hListView, 0, NULL);
+				MessageBox(hMainWnd, "    Can't open file or invalid file format, \r\n    choose another one", "Error", MB_OKCANCEL | MB_ICONWARNING);
+				break;
+			}
+
 			g_sz = get_filesize(g_filepath);
 
 			// pass file to functional part
-			assign_var(g_filepath);
+			if (assign_var(g_filepath) == FALSE) {
+				TreeView_DeleteAllItems(hTreeView);
+				ListView_SetItemCountEx(hListView, 0, NULL);
+				MessageBox(hMainWnd, "    Can't open file or invalid file format, \r\n    choose another one", "Error", MB_OKCANCEL | MB_ICONWARNING);
+				break;
+			}
+
+			// clear tree view first
+			TreeView_DeleteAllItems(hTreeView);
 
 			// generate tree view
 			struct tree_node * node = get_tree_view();
+
 			HTREEITEM root = add_node(g_filename, NULL, TVI_FIRST);
+
 			rec_tree_gen(node->sub_node, root);
 
 
@@ -1040,6 +1107,14 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_GOTO), hwnd, GotoDlgProc);
 	}
 				  break;
+	case ID_FILE_CLOSE: {
+		PostQuitMessage(0);
+	}
+				  break;
+	case ID_ABOUT: {
+		MessageBox(hMainWnd, "    A file viewer of pe format based on Win32. This is a free\r\n    software, all source code can be downloaded freely\r\n\r\n    report errors: jlu DOT hpw AT foxmail DOT com\r\n\r\n    author: www.hupeiwei.com", "About", MB_OK | MB_ICONINFORMATION);
+	}
+				   break;
 	} /*switch (LOWORD(wParam))*/
 }
 

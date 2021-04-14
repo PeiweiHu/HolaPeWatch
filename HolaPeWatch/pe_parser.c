@@ -16,6 +16,7 @@ struct error_struct error_head = { "HEAD", 1, NULL};
 void add_error(char * reason, int level) {
 	struct error_struct * new_error = (struct error_struct *)malloc(sizeof(struct error_struct));
 	new_error->level = level;
+	new_error->reason = (char*)malloc(MAX_PATH);
 	strcpy(new_error->reason, reason);
 	// find the end of this link
 	struct error_struct *tmp = &error_head;
@@ -111,18 +112,19 @@ int which_section(DWORD rva) {
 	return sec_index;
 }
 
-void assign_var(char * file_path) {
+BOOL assign_var(char * file_path) {
 	// load file
 	FILE * pfile = fopen(file_path, "rb+");
 	if (pfile == NULL) {
 		add_error("Fail to load file in function assign_var, pe_parser.c", 1);
-		return;
+		return FALSE;
 	}
 	// get dos header
 	fread(&dos_header, sizeof(IMAGE_DOS_HEADER), 1, pfile);
 	if (dos_header.e_magic != IMAGE_DOS_SIGNATURE) { // check dos signature
 		add_error("The selected file has invalid dos signature.", 1);
-		return;
+
+		return FALSE;
 	}
 	// get nt header
 	LONG nt_offset = dos_header.e_lfanew;
@@ -130,7 +132,7 @@ void assign_var(char * file_path) {
 	fread(&nt_headers, sizeof(IMAGE_NT_HEADERS), 1, pfile);
 	if (nt_headers.Signature != IMAGE_NT_SIGNATURE) { // check nt signature
 		add_error("The selected file has invalid nt signature.", 1);
-		return;
+		return FALSE;
 	}
 	// get file header and optional header
 	file_header = nt_headers.FileHeader;
@@ -157,7 +159,7 @@ void assign_var(char * file_path) {
 	fseek(pfile, raw_addr, SEEK_SET);
 	fread(&export_directory, sizeof(IMAGE_EXPORT_DIRECTORY), 1, pfile);
 	fclose(pfile);
-	return;
+	return TRUE;
 }
 
 //-----------------comm with GUI----------------
@@ -305,6 +307,7 @@ struct tree_node * get_tree_view() {
 	tmp->sibling = NULL;
 
 	// insert IMAGE_EXPORT_DIRECTORY
+	/*
 	if (optional_header.DataDirectory[0].Size != 0) {
 		int sec_index = which_section(optional_header.DataDirectory[0].VirtualAddress);
 		char * sec_name = (char *)malloc(MAX_PATH);
@@ -313,7 +316,7 @@ struct tree_node * get_tree_view() {
 		insert_sub_node(root, sec_name, "IMAGE_EXPORT_DIRECTORY");
 		free(sec_name);
 		sec_name = NULL;
-	}
+	}*/
 	return root;
 }
 
