@@ -1,5 +1,6 @@
 #include "common.h"
 #include "pe_parser.h"
+#include "bin_edit.h"
 
 #define MAINWND_WIDTH 950
 #define MAINWND_HEIGHT 605
@@ -46,6 +47,7 @@ WNDCLASSEX MainWnd;
 HWND hMainWnd;
 HWND hListView;
 HWND hTreeView;
+HWND hBinEditDlg;
 MSG msg;
 
 
@@ -63,6 +65,7 @@ long g_goto_base = -1;
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK GotoDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+BOOL CALLBACK BinEditDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 
 // function defination
@@ -184,6 +187,26 @@ void update_menu_goto(long goto_base) {
 	g_goto_base = goto_base;
 }
 
+BOOL is_valid_addr(char * buf) {
+	int buf_len = strlen(buf);
+	// this change is for isxdigit
+	if (buf_len >= 2) {
+		if (buf[0] == '0' && (buf[1] == 'x' | buf[1] == 'X')) {
+			buf[1] = '0';
+		}
+	}
+	for (int i = 0; i < buf_len; i++) {
+		int ele = *(buf + i);
+		if (ele < 0 || ele > 255) {
+			return FALSE;
+		}
+		if (!isxdigit(ele)) {
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 // check g_goto_buf
 BOOL go() {
 	if (g_goto_buf == NULL) return FALSE;
@@ -192,24 +215,10 @@ BOOL go() {
 		return FALSE;
 	}
 	// first check format
-	// remove 0x 0X
-	if (g_goto_buf[0] == '0' && (g_goto_buf[1] == 'x' || g_goto_buf[1] == 'X')) {
-		g_goto_buf[0] = '0';
-		g_goto_buf[1] = '0';
+	if (!is_valid_addr(g_goto_buf)) {
+		MessageBox(hMainWnd, "    Invalid address format", "Error", MB_OK | MB_ICONWARNING);
+		return FALSE;
 	}
-	int buf_len = strlen(g_goto_buf);
-	for (int i = 0; i < buf_len; i++) {
-		int ele = *(g_goto_buf + i);
-		if (ele < 0 || ele > 255) {
-			MessageBox(hMainWnd, "    Invalid address", "Error", MB_OK | MB_ICONWARNING);
-			return FALSE;
-		}
-		if (!isxdigit(ele)) {
-			MessageBox(hMainWnd, "    Invalid address", "Error", MB_OK | MB_ICONWARNING);
-			return FALSE;
-		}
-	}
-
 	// then check current list view
 	// do it later
 
@@ -219,7 +228,7 @@ BOOL go() {
 
 	long last_row = g_sz / 16;
 	if (addr > last_row || addr < 0) {
-		MessageBox(hMainWnd, "Invalid address", "Error", NULL);
+		MessageBox(hMainWnd, "    Invalid address range", "Error", MB_OK | MB_ICONWARNING);
 		return FALSE;
 	}
 	ListView_EnsureVisible(hListView, addr, 0);
@@ -1069,6 +1078,7 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		ofn.hwndOwner = hwnd;
 		ofn.lpstrFilter = "Dll File (*.dll)\0*.dll\0Exe File (*.exe)\0*.exe\0All Files (*.*)\0*.*\0";
 		ofn.lpstrFile = g_filepath;
+		ofn.lpstrTitle = "Open";
 		ofn.nMaxFile = MAX_PATH;
 		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
 		ofn.lpstrDefExt = "exe";
@@ -1110,10 +1120,44 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		}
 	}
 					   break;
+	case ID_FILE_SAVE: {
+		OPENFILENAME ofn;
+		char savefilepath[MAX_PATH] = "";
+		ZeroMemory(&ofn, sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = hwnd;
+		ofn.lpstrFilter = "Exe File (*.exe)\0*.exe\0Dll File (*.dll)\0*.dll\0All Files (*.*)\0*.*\0";
+		ofn.lpstrFile = savefilepath;
+		ofn.lpstrTitle = "Save as";
+		ofn.nMaxFile = MAX_PATH;
+		ofn.Flags = OFN_EXPLORER | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+		ofn.lpstrDefExt = "exe";
+		if (GetOpenFileName(&ofn)) {
+			// if file exists
+			if (!access(savefilepath, 0)) {
+				int ret = MessageBox(NULL, "    The file exists, do you wanna overwrite it?", "Warning", MB_YESNO | MB_ICONWARNING);
+				if (ret == IDNO) {
+					goto END_ID_FILE_SAVE;
+				}
+			}
+			// write file
+			FILE * pfile = fopen(savefilepath, "wb");
+			if (!pfile) {
+				MessageBox(NULL, "    Fail to write file.", "Error", MB_OK | MB_ICONWARNING);
+				fclose(pfile);
+				goto END_ID_FILE_SAVE;
+			}
+			if (fwrite(g_content, sizeof(unsigned char), g_sz, pfile) != g_sz) {
+				MessageBox(NULL, "    Fail to write file.", "Error", MB_OK | MB_ICONWARNING);
+			}
+			fclose(pfile);
+		}
+	}
+	END_ID_FILE_SAVE:   break;
 	case ID_GOTO: {
 		int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_GOTO), hwnd, GotoDlgProc);
 	}
-					break;
+				  break;
 	case ID_FILE_CLOSE: {
 		PostQuitMessage(0);
 	}
@@ -1123,6 +1167,14 @@ void do_command(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		//MessageBox(hMainWnd, "    A file viewer of pe format based on Win32. This is a free\r\n    software, all source code can be downloaded freely\r\n\r\n    report errors: jlu DOT hpw AT foxmail DOT com\r\n\r\n    author: www.hupeiwei.com", "About", MB_OK | MB_ICONINFORMATION);
 	}
 				   break;
+	case ID_TOOL_BINEDIT: {
+		hBinEditDlg = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_BINEDIT), hMainWnd, BinEditDlgProc);
+		if (hBinEditDlg != NULL)
+		{
+			ShowWindow(hBinEditDlg, SW_SHOW);
+		}
+	}
+						  break;
 	} /*switch (LOWORD(wParam))*/
 }
 
@@ -1183,6 +1235,106 @@ BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam
 		}
 		// go to default so user can move dialog window
 		return FALSE;
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL CALLBACK BinEditDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+	switch (Message)
+	{
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case ID_BINEDIT_OK: {
+
+			HWND hAddr = GetDlgItem(hwnd, ID_BINEDIT_ADDR);
+			size_t buffer_len = (GetWindowTextLength(hAddr) + 1) * sizeof(char);
+			// get address and check its format
+			char * addr_buf = (char *)malloc(buffer_len);
+
+			if (addr_buf) {
+				GetDlgItemText(hwnd, ID_BINEDIT_ADDR, (LPTSTR)addr_buf, buffer_len);
+				if (!is_valid_addr(addr_buf)) {
+					MessageBox(NULL, "    Invalid address format", "Error", MB_OK | MB_ICONWARNING);
+					free(addr_buf);
+					goto END_OF_MBOK; // leave
+				}
+			}
+			else {
+				break;
+			}
+
+
+			// content 
+			HWND hContent = GetDlgItem(hwnd, ID_BINEDIT_TXT);
+			buffer_len = (GetWindowTextLength(hContent) + 1)*sizeof(unsigned char);
+			unsigned char * content_buf = (unsigned char *)malloc(buffer_len);
+
+			if (content_buf) {
+				GetDlgItemText(hwnd, ID_BINEDIT_TXT, (LPTSTR)content_buf, buffer_len);
+
+				// first, check the format of content
+				for (int i = 0; i < buffer_len; i++) {
+					if (content_buf[i] == '0' && (content_buf[i + 1] == 'x' || content_buf[i + 1] == 'X')) {
+						if (!isxdigit(content_buf[i + 2]) || !isxdigit(content_buf[i + 3])) {
+							MessageBox(NULL, "    Please the format of content.", "Error", MB_OK | MB_ICONWARNING);
+							goto END_OF_MBOK;
+						}
+					}
+				}
+
+				// process content_buf
+				char tmp_char[3];
+				long base_addr;
+				sscanf(addr_buf, "%x", &base_addr);
+
+				int writein_cnt = 0;
+				for (int i = 0; i < buffer_len; i++) {
+					if (content_buf[i] == '0' && (content_buf[i + 1] == 'x' || content_buf[i + 1] == 'X')) {
+
+						tmp_char[0] = content_buf[i + 2];
+						tmp_char[1] = content_buf[i + 3];
+						tmp_char[2] = '\0';
+
+						if (base_addr + writein_cnt >= g_sz) {
+							char warn_info[MAX_PATH];
+							wsprintf(warn_info, "    Over program file range while writing %s", tmp_char);
+							MessageBox(NULL, warn_info, "Error", MB_OK | MB_ICONWARNING);
+							break;
+						}
+
+						sscanf(tmp_char, "%x", &g_content[base_addr + writein_cnt++]);
+
+						//char info[MAX_PATH];
+						//wsprintf(info, "write %s to %x", &tmp_char, base_addr + writein_cnt - 1);
+						//MessageBox(NULL, info, "a", NULL);
+					}
+				}
+				// user scrolls manually to update listview display
+				char tmp[MAX_PATH];
+				wsprintf(tmp, "    write successfully,  %d bytes are changed in total", writein_cnt);
+				MessageBox(NULL, tmp, "Tips", MB_OK);
+			} 
+			else {
+				break;
+			}
+
+		} // case ID_BINEDIT_OK END
+END_OF_MBOK:					break;
+		case ID_BINEDIT_CANCEL:
+			DestroyWindow(hBinEditDlg);
+			break;
+		}
+		break;
+	case WM_CLOSE:
+		DestroyWindow(hBinEditDlg);
+		break;
+	case WM_DESTROY:
+		DestroyWindow(hBinEditDlg);
+		break;
 	default:
 		return FALSE;
 	}

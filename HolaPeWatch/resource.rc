@@ -9,7 +9,12 @@ BEGIN
 POPUP "File"
 BEGIN
 MENUITEM "Open", ID_FILE_OPEN
+MENUITEM "Save as ...", ID_FILE_SAVE
 MENUITEM "Close", ID_FILE_CLOSE
+END
+POPUP "Tool"
+BEGIN
+MENUITEM "Binary editor", ID_TOOL_BINEDIT
 END
 MENUITEM "Goto", ID_GOTO, INACTIVE
 MENUITEM "About", ID_ABOUT
@@ -29,14 +34,27 @@ IDC_MYICON ICON "HPW.ico"
 IDB_MYBMP BITMAP "HPW.bmp"
 
 
-
-
 IDD_ABOUT DIALOGEX 0, 0, 234, 206
-STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+//STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About"
 FONT 10, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
 DEFPUSHBUTTON   "OK", ID_ABOUT_OK, 90, 174, 50, 14
 LTEXT           "A file viewer of pe format based on Win32. This is a free software, all source code can be downloaded freely.\r\n\r\nauthor: www.hupeiwei.com\r\n\r\nreport errors: jlu.hpw@foxmail.com", ID_ABOUT_TXT, 40, 92, 145, 82
 CONTROL         IDB_MYBMP, ID_ABOUT_PIC, "Static",  SS_BITMAP | WS_GROUP, 45, 14, 135, 57
+END
+
+
+
+IDD_BINEDIT DIALOGEX 0, 0, 234, 206
+//STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Binary editor"
+FONT 10, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+DEFPUSHBUTTON   "OK", ID_BINEDIT_OK, 40, 180, 50, 14
+LTEXT           "Enter the content to replace in hex format, like 0x01 0x33 0xef", IDC_STATIC, 24, 37, 200, 8
+LTEXT           "Start address", IDC_STATIC, 24, 16, 60, 8
+EDITTEXT        ID_BINEDIT_ADDR, 70, 14, 117, 14, ES_AUTOHSCROLL
+EDITTEXT        ID_BINEDIT_TXT, 24, 52, 190, 122, ES_MULTILINE | ES_AUTOVSCROLL
+PUSHBUTTON      "CANCEL", ID_BINEDIT_CANCEL, 125, 180, 50, 14
 END
