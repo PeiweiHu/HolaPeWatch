@@ -127,6 +127,7 @@ BOOL assign_var(char * file_path) {
 
 		return FALSE;
 	}
+	
 	// get nt header
 	LONG nt_offset = dos_header.e_lfanew;
 	fseek(pfile, dos_header.e_lfanew, SEEK_SET);
@@ -137,6 +138,11 @@ BOOL assign_var(char * file_path) {
 	}
 	// get file header and optional header
 	file_header = nt_headers.FileHeader;
+	// currently parse 32 bit only
+	if (file_header.Machine != IMAGE_FILE_MACHINE_I386) {
+		add_error("Support 32-bit file only.", 1);
+		return FALSE;
+	}
 	optional_header = nt_headers.OptionalHeader;
 	number_of_sections = file_header.NumberOfSections;
 	// analyse section header

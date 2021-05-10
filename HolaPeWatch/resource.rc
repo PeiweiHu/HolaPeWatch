@@ -40,7 +40,7 @@ CAPTION "About"
 FONT 10, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
 DEFPUSHBUTTON   "OK", ID_ABOUT_OK, 90, 174, 50, 14
-LTEXT           "A file viewer of pe format based on Win32. This is a free software, all source code can be downloaded freely.\r\n\r\nauthor: www.hupeiwei.com\r\n\r\nreport errors: jlu.hpw@foxmail.com", ID_ABOUT_TXT, 40, 92, 145, 82
+LTEXT           "A file viewer of pe format based on Win32. This is a free software, all code can be downloaded freely.\r\n\r\nauthor: www.hupeiwei.com\r\n\r\nreport errors: jlu.hpw@foxmail.com", ID_ABOUT_TXT, 40, 92, 145, 82
 CONTROL         IDB_MYBMP, ID_ABOUT_PIC, "Static",  SS_BITMAP | WS_GROUP, 45, 14, 135, 57
 END
 
